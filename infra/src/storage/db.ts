@@ -1,5 +1,6 @@
 import "reflect-metadata";
 import { createConnection, Connection, ConnectionOptions } from "typeorm";
+export { Repository, Entity, Column, PrimaryGeneratedColumn } from "typeorm";
 
 const CONNECTION_RETRY_COUNT: number = 10;
 const CONNECTION_RETRY_TIMEOUT_MS: number = 4000;
@@ -7,8 +8,8 @@ const CONNECTION_RETRY_TIMEOUT_MS: number = 4000;
 export class Db {
   private static _connection: Connection;
 
-  public static async run(): Promise<void> {
-    this._connection = await this.connect();   
+  public static async run(entitiesPath: string): Promise<void> {
+    this._connection = await this.connect(entitiesPath);   
   }
 
   public static getConnection(): Connection {
@@ -18,7 +19,7 @@ export class Db {
     return this._connection;
   }
 
-  private static async connect(): Promise<Connection> {
+  private static async connect(entitiesPath: string): Promise<Connection> {
      
     // Env variable 'PG_HOST' defined in 'docker-compose.yml', the 'localhost' will
     // be selected if run performed without the 'docker-compose.yml' (e.g. while
@@ -40,7 +41,7 @@ export class Db {
       dropSchema: true, // Drops the schema each time connection is being established (TODO: not for pruduction!!!)
       logging: false,
       entities: [
-        "build/src/storage/entities/*.js"
+        entitiesPath // E.g. "build/src/storage/entities/*.js"
       ]      
     };
 

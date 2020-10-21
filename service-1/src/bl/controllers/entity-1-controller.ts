@@ -1,6 +1,5 @@
-import { Repository } from "typeorm";
 import { Entity1 } from "../../storage/entities/entity-1";
-import { Db } from "../../storage/infra/db";
+import { Db, Repository } from "../../../../infra/src/storage/db";
 
 export class Entity1Controller {
   private _repository: Repository<Entity1>;

@@ -1,10 +1,10 @@
-import { Express, Router, Request, Response } from "express";
+import { Express, Router, Request, Response, IRouter } from "infra/src/api/server";
 import { Entity1Controller } from "../../bl/controllers/entity-1-controller";
 import { Entity1 } from "../../storage/entities/entity-1";
 
-export class Entity1Router {
+export class Entity1Router implements IRouter {
 
-  public static run(app: Express, router: Router): void {
+  public run(app: Express, router: Router): void {
     var controller: Entity1Controller = new Entity1Controller();
 
     // Create a new entity1

@@ -1,4 +1,4 @@
-import {Entity, Column, PrimaryGeneratedColumn} from "typeorm";
+import {Entity, Column, PrimaryGeneratedColumn} from "../../../../infra/src/storage/db";
 
 @Entity({ name: "Entity1s" })
 export class Entity1 {
