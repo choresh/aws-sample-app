@@ -1,4 +1,4 @@
-import {Entity, Column, PrimaryGeneratedColumn} from "../../../../infra/src/storage/db";
+import {Entity, Column, PrimaryGeneratedColumn} from "../../infra/storage/db";
 
 @Entity({ name: "Entity1s" })
 export class Entity1 {

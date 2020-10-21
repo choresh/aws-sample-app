@@ -1,4 +1,4 @@
-import { Express, Router, Request, Response, IRouter } from "infra/src/api/server";
+import { Express, Router, Request, Response, IRouter } from "../../infra/api/server";
 import { Entity1Controller } from "../../bl/controllers/entity-1-controller";
 import { Entity1 } from "../../storage/entities/entity-1";
 
