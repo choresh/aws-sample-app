@@ -1,0 +1,21 @@
+version: "3"
+services:
+  aws-sample-app:
+    build: .
+    depends_on:
+      - postgres
+    environment:       
+        PG_HOST: postgres    
+  postgres:
+    image: postgres:12.4-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: postgres
+  sut:
+    build: .
+    depends_on:
+      - aws-sample-app
+    environment:
+      SERVICE_HOST: aws-sample-app    
+    command: npm run test

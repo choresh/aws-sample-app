@@ -1,0 +1,28 @@
+version: "3"
+services:
+  aws-sample-app:
+    image: 403698577297.dkr.ecr.us-east-2.amazonaws.com/aws-sample-app 
+    ports:
+      - "8080:8080"
+    depends_on:
+      - postgres
+    logging:
+      driver: awslogs
+      options: 
+        awslogs-group: aws-sample-app
+        awslogs-region: us-east-2
+        awslogs-stream-prefix: aws-sample-app
+  postgres:
+    image: postgres:12.4-alpine
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: postgres
+    logging:
+      driver: awslogs
+      options: 
+        awslogs-group: aws-sample-app
+        awslogs-region: us-east-2
+        awslogs-stream-prefix: aws-sample-app
