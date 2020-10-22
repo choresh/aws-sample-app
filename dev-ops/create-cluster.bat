@@ -3,13 +3,13 @@
 REM ================= Stage #1 - Secret Keys - start ==============================
 REM * In this stage we store credintials required for the AWS/ECS CLI's.
 REM * More about those Access Keys - see the following chapters in 'README.md' file of this package:
-REM     * 'At AWS - create IAM user, and get correspond access keys'.
-REM     * 'Configure our batch file'.
+REM   * 'At AWS - create IAM user, and get correspond access keys'.
+REM   * 'Configure our batch file'.
 REM * IMPORTENT:
-REM     * Never expose those Access Keys!!!
-REM     * Use them only at private environment (e.g. your local machine)!!!
-REM     * If they became public - be sure that some automatic scanners will detect them, and someone will try to use your credentials in order to consume AWS resources on you budget!!!
-REM     * Such an exposure may happened by mistake, e.g. if you push this file to public GitHub, while those values defined in it!!!
+REM   * Never expose those Access Keys!!!
+REM   * Use them only at private environment (e.g. your local machine)!!!
+REM   * If they became public - be sure that some automatic scanners will detect them, and someone will try to use your credentials in order to consume AWS resources on you budget!!!
+REM   * Such an exposure may happened by mistake, e.g. if you push this file to public GitHub, while those values defined in it!!!
 SET AWS_ACCESS_KEY_ID=
 SET AWS_SECRET_ACCESS_KEY=
 REM
