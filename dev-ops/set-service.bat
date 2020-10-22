@@ -10,13 +10,9 @@ SET REGION=%3
 SET TEMP_FILE_PATH=%4
 SET TASK_DEFINITION=%5
 SET WORKING_FOLDER=%6
-SET GREEN=%7
-SET ORANGE=%8
-SET RED=%9
-SET CURR_FOLDER=%10
-
-SET MSG=* Handling of service '%SERVICE_NAME%' - started
-ECHO [201;%ORANGE%m%MSG%[0m
+SET ORANGE=%7
+SET RED=%8
+SET CURR_FOLDER=%9
 
 REM Define names for folders and files.
 SET SERVICES_FOLDER="services"
@@ -29,6 +25,9 @@ SET GITHUB_PARAMS_GENERATED_FILE_PATH=%GITHUB_WORKFLOWS_FOLDER%/%SERVICE_NAME%-%
 
 REM Move to working folder
 CD %WORKING_FOLDER%
+
+SET MSG=* Handling of service '%SERVICE_NAME%' - started
+ECHO [201;%ORANGE%m%MSG%[0m
 
 REM ================= Stage #1 - Settings - end ==============================
 

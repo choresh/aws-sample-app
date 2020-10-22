@@ -263,7 +263,7 @@ REM Move to current folder
 CD %CURR_FOLDER%
 
 FOR /D %%i IN (../services/*) DO (
-    CALL set-service %%i %APP_NAME% %REGION% %TEMP_FILE_PATH% %TASK_DEFINITION% "%WORKING_FOLDER%" %GREEN% %ORANGE% %RED% "%CURR_FOLDER%"
+    CALL set-service %%i %APP_NAME% %REGION% %TEMP_FILE_PATH% %TASK_DEFINITION% "%WORKING_FOLDER%" %ORANGE% %RED% "%CURR_FOLDER%"
 )
 
 REM Move to working folder
