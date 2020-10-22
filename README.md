@@ -100,19 +100,19 @@
                 }
                 ~~~
             * Click the 'Review policy' button, and at next page click the 'Create policy' bytton.
-        * Go to 'Users' - > 'Add user', create new user, and attach to it 3 policies (they required for the AWS/ECS/DOCKER CLI comands we going to execute at 'create-cluster.bat'):
+        * Go to 'Users' - > 'Add user', create new user, and attach to it 3 policies (they required for the AWS/ECS/DOCKER CLI comands we going to execute at 'set-cluster.bat'):
             * The costom policy (see previuos step).
             * The 'AmazonECS_FullAccess' policy.
             * The 'AmazonEC2ContainerRegistryFullAccess' policy.
         * Within detailes page of the new user, go to 'Security credentials' tab, create new Access Keys, and save/copy the 2 values (we will use them at next step).
 * Configure our batch file:
-    * Go to root folder of the app (the folder where file 'docker-compose.yml' located), open file 'create-cluster.bat', and set the Access Keys values (see previos step) in the 'AWS_ACCESS_KEY_ID' and 'AWS_SECRET_ACCESS_KEY' variables.
+    * Go to root folder of the app (the folder where file 'docker-compose.yml' located), open file 'set-cluster.bat', and set the Access Keys values (see previos step) in the 'AWS_ACCESS_KEY_ID' and 'AWS_SECRET_ACCESS_KEY' variables.
 
 ### Install, build and run the application:
 * Execute our batch file:
     * Go to root folder of the app (the folder where file 'docker-compose.yml' located), and execute the following batch file:
         ~~~
-        create-cluster.bat
+        set-cluster.bat
         ~~~
     * Those are the main actions which performed by our batch file:
         * Creating AWS reposetory.
