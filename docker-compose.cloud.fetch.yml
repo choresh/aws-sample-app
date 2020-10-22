@@ -12,6 +12,18 @@ services:
         awslogs-group: aws-sample-app
         awslogs-region: us-east-2
         awslogs-stream-prefix: aws-sample-app
+  service-2:
+    image: 403698577297.dkr.ecr.us-east-2.amazonaws.com/service-2 
+    ports:
+      - "8081:8081"
+    depends_on:
+      - postgres
+    logging:
+      driver: awslogs
+      options: 
+        awslogs-group: aws-sample-app
+        awslogs-region: us-east-2
+        awslogs-stream-prefix: aws-sample-app
   postgres:
     image: postgres:12.4-alpine
     ports:

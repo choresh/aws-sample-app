@@ -1,13 +1,21 @@
 version: "3"
 services:
   service-1:
-    build: ./service-1
+    build: ./services/service-1
     ports:
       - "8080:8080"
     depends_on:
       - postgres
     environment:       
-      PG_HOST: postgres 
+      PG_HOST: postgres
+  service-2:
+    build: ./services/service-2
+    ports:
+      - "8081:8081"
+    depends_on:
+      - postgres
+    environment:       
+      PG_HOST: postgres  
   postgres:
     image: postgres:12.4-alpine
     ports:

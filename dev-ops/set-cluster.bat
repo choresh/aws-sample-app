@@ -10,8 +10,8 @@ REM   * Never expose those Access Keys!!!
 REM   * Use them only at private environment (e.g. your local machine)!!!
 REM   * If they became public - be sure that some automatic scanners will detect them, and someone will try to use your credentials in order to consume AWS resources on you budget!!!
 REM   * Such an exposure may happened by mistake, e.g. if you push this file to public GitHub, while those values defined in it!!!
-SET AWS_ACCESS_KEY_ID=AKIAV37SPN6I6RGKQWOB
-SET AWS_SECRET_ACCESS_KEY=esQxDZyMUGUG+JgnpwxMaxjoHzzcdOot6CcQLp6c
+SET AWS_ACCESS_KEY_ID=
+SET AWS_SECRET_ACCESS_KEY=
 REM
 REM ================= Stage #1 - Secret Keys - end ==============================
 
@@ -263,11 +263,8 @@ REM Move to current folder
 CD %CURR_FOLDER%
 
 FOR /D %%i IN (../services/*) DO (
-    CALL set-service %%i %APP_NAME% %REGION% %TEMP_FILE_PATH% %TASK_DEFINITION% "%WORKING_FOLDER%" %GREEN% %ORANGE% %RED%
+    CALL set-service %%i %APP_NAME% %REGION% %TEMP_FILE_PATH% %TASK_DEFINITION% "%WORKING_FOLDER%" %GREEN% %ORANGE% %RED% "%CURR_FOLDER%"
 )
-
-ECHO ENDED!
-PAUSE
 
 REM Move to working folder
 CD %WORKING_FOLDER%

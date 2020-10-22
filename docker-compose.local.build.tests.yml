@@ -1,7 +1,13 @@
 version: "3"
 services:
-  service-1 :
-    build: ./service-1 
+  service-1:
+    build: ./services/service-1 
+    depends_on:
+      - postgres
+    environment:       
+        PG_HOST: postgres
+  service-2:
+    build: ./services/service-2 
     depends_on:
       - postgres
     environment:       

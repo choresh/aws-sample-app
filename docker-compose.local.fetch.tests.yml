@@ -6,6 +6,12 @@ services:
       - postgres
     environment:       
       PG_HOST: postgres
+  service-2:
+    image: 403698577297.dkr.ecr.us-east-2.amazonaws.com/service-2
+    depends_on:
+      - postgres
+    environment:       
+      PG_HOST: postgres      
   postgres:
     image: postgres:12.4-alpine
     environment:

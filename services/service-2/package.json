@@ -1,5 +1,5 @@
 {
-  "name": "service-1",
+  "name": "service-2",
   "version": "0.0.1",
   "dependencies": {
     "typeorm": "0.2.26",

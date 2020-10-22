@@ -12,6 +12,18 @@ services:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: postgres
+  service-2:
+    depends_on:
+      - postgres
+    image: 403698577297.dkr.ecr.us-east-2.amazonaws.com/service-2 
+    environment:       
+      PG_HOST: postgres
+  postgres:
+    image: postgres:12.4-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: postgres
   sut:
     image: 403698577297.dkr.ecr.us-east-2.amazonaws.com/service-1 
     depends_on:

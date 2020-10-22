@@ -13,6 +13,7 @@ SET WORKING_FOLDER=%6
 SET GREEN=%7
 SET ORANGE=%8
 SET RED=%9
+SET CURR_FOLDER=%10
 
 SET MSG=* Handling of service '%SERVICE_NAME%' - started
 ECHO [201;%ORANGE%m%MSG%[0m
@@ -148,5 +149,8 @@ IF DEFINED ERR_MSG (
 
 SET MSG=* Handling of service '%SERVICE_NAME%' - ended
 ECHO [201;%ORANGE%m%MSG%[0m
+
+REM Move to current folder
+CD %CURR_FOLDER%
 
 REM ================= Stage #6 - Termination - end ==============================
