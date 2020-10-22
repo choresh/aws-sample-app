@@ -1,7 +1,7 @@
 version: "3"
 services:
-  aws-sample-app:
-    build: .
+  service-1 :
+    build: ./service-1 
     depends_on:
       - postgres
     environment:       
@@ -13,9 +13,9 @@ services:
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: postgres
   sut:
-    build: .
+    build: ./service-1
     depends_on:
-      - aws-sample-app
+      - service-1
     environment:
-      SERVICE_HOST: aws-sample-app    
+      SERVICE_HOST: service-1    
     command: npm run test

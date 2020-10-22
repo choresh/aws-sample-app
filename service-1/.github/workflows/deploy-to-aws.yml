@@ -55,7 +55,7 @@ jobs:
       id: build-image
       env:
         ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-        ECR_REPOSITORY: aws-sample-app
+        ECR_REPOSITORY: service-1
         IMAGE_TAG: ${{ github.sha }}
       run: |
         # Build a docker container and push it to ECR so that it can be deployed to ECS.
@@ -64,7 +64,7 @@ jobs:
         echo "::set-output name=image::$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
 
         echo "Download task definition file"
-        aws ecs describe-task-definition --task-definition aws-sample-app:96 --query taskDefinition > task-definition.json
+        aws ecs describe-task-definition --task-definition aws-sample-app:3 --query taskDefinition > task-definition.json
     
     - name: Run tests
       id: docker-compose-test
@@ -75,13 +75,13 @@ jobs:
       uses: aws-actions/amazon-ecs-render-task-definition@v1
       with:
         task-definition: task-definition.json
-        container-name: aws-sample-app
+        container-name: service-1
         image: ${{ steps.build-image.outputs.image }}
 
     - name: Deploy Amazon ECS task definition
       uses: aws-actions/amazon-ecs-deploy-task-definition@v1
       with:
         task-definition: ${{ steps.task-def.outputs.task-definition }}
-        service: aws-sample-app
+        service: service-1
         cluster: aws-sample-app
         wait-for-service-stability: true

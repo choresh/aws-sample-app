@@ -1,7 +1,7 @@
 version: "3"
 services:
-  aws-sample-app:
-    image: 403698577297.dkr.ecr.us-east-2.amazonaws.com/aws-sample-app 
+  service-1:
+    image: 403698577297.dkr.ecr.us-east-2.amazonaws.com/service-1
     depends_on:
       - postgres
     ports:

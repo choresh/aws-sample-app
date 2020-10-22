@@ -23,6 +23,7 @@ REM Define per-app values.
 SET APP_NAME=aws-sample-app
 SET REGION=us-east-2
 SET PORT=8080
+SET SERVICE_NAME=service-1
 
 REM Define constants (names for folders and files).
 SET CURR_FOLDER=%~dp0
@@ -32,7 +33,7 @@ SET TEMP_FOLDER=dev-ops/%TEMP_FOLDER_NAME%
 SET AWS_FOLDER=dev-ops/aws
 SET DOCKER_COMPOSE_FILE_NAME=docker-compose.cloud.fetch.yml
 SET TEMP_FILE_NAME=%TEMP_FOLDER%/temp.txt
-SET GITHUB_WORKFLOWS_FOLDER=.github/workflows
+SET GITHUB_WORKFLOWS_FOLDER=%SERVICE_NAME%/.github/workflows
 SET ROLE_POLICY_FILE=%AWS_FOLDER%/task-execution-assume-role.json
 SET ECS_PARAMS_TEMPLATE_FILE_NAME=%AWS_FOLDER%/ecs-params-template.yml
 SET ECS_PARAMS_FILE_NAME=%TEMP_FOLDER%/ecs-params.yml
@@ -43,14 +44,15 @@ SET GITHUB_PARAMS_FILE_NAME=%GITHUB_WORKFLOWS_FOLDER%/deploy-to-aws.yml
 REM Define values derived from 'APP_NAME'.
 SET ROLE_NAME=%APP_NAME% 
 SET PROFILE_NAME=%APP_NAME%
-SET REPOSITORY_NAME=%APP_NAME%
 SET CLUSTER_NAME=%APP_NAME%
-SET ECR_REPOSITORY=%APP_NAME%
-SET SERVICE_NAME=%APP_NAME%
-SET CONTAINER_NAME=%APP_NAME%
 SET PROJECT_NAME=%APP_NAME%
 SET CLUSTER_CONFIG_NAME=%APP_NAME%
 SET LOG_GROUP_NAME=%APP_NAME%
+
+REM Define values derived from 'SERVICE_NAME'.
+SET ECR_REPOSITORY=%SERVICE_NAME%
+SET CONTAINER_NAME=%SERVICE_NAME%
+SET REPOSITORY_NAME=%SERVICE_NAME%
 
 REM Define print colors.
 REM SET HEADER_COLOR=95
@@ -82,7 +84,7 @@ ECHO [201;%OKGREEN_COLOR%m%MSG%[0m
 ecs-cli compose --project-name %PROJECT_NAME% service down --cluster-config %CLUSTER_CONFIG_NAME% --ecs-profile %PROFILE_NAME% > NUL 2>&1
 ecs-cli down --cluster-config %CLUSTER_CONFIG_NAME% --ecs-profile %PROFILE_NAME% --force > NUL 2>&1
 aws ecr delete-repository --repository-name %REPOSITORY_NAME% --region %REGION% --force > NUL 2>&1
-aws logs delete-log-group --log-group-name %LOG_GROUP_NAME% --region %REGION%
+aws logs delete-log-group --log-group-name %LOG_GROUP_NAME% --region %REGION% > NUL 2>&1
 SET MSG=* Clear all resources (if exists) - ended
 ECHO [201;%OKGREEN_COLOR%m%MSG%[0m
 
@@ -128,6 +130,16 @@ REM ================= Stage #4 - AWS Repository Creation - end =================
 REM ================= Stage #5 - Docker Image Creation - start ==============================
 REM In this stage we build docker image, and push it to our reposetory.
 
+SET MSG=* Create ECS CLI profile (if not exists) - started
+ECHO [201;%OKGREEN_COLOR%m%MSG%[0m
+ecs-cli configure profile --access-key %AWS_ACCESS_KEY_ID% --secret-key %AWS_SECRET_ACCESS_KEY% --profile-name %PROFILE_NAME% > NUL 2>1
+IF NOT %errorlevel% == 0 (
+    SET ERR_MSG=* Create ECS CLI profile - failed, error code: %errorlevel%
+    GOTO END
+)
+SET MSG=* Create ECS CLI profile (if not exists) - ended
+ECHO [201;%OKGREEN_COLOR%m%MSG%[0m
+
 SET MSG=* Authenticate Docker to an Amazon ECR reposetory - started
 ECHO [201;%OKGREEN_COLOR%m%MSG%[0m
 aws ecr get-login-password --region %REGION% | docker login --username AWS --password-stdin %FOUND_REPOSITORY_URI% > NUL
@@ -138,10 +150,12 @@ IF NOT %errorlevel% == 0 (
 SET MSG=* Authenticate Docker to an Amazon ECR reposetory - ended
 ECHO [201;%OKGREEN_COLOR%m%MSG%[0m
 
+CD %SERVICE_NAME%
+
 SET MSG=* Build - started (may take few minutes...)
 ECHO [201;%OKGREEN_COLOR%m%MSG%[0m
 ECHO =====================================================================
-docker build -t %FOUND_REPOSITORY_URI% .
+docker build -t %FOUND_REPOSITORY_URI% . 
 ECHO =====================================================================
 SET MSG=* Build - ended
 ECHO [201;%OKGREEN_COLOR%m%MSG%[0m
@@ -153,6 +167,8 @@ docker push %FOUND_REPOSITORY_URI%
 ECHO =====================================================================
 SET MSG=* Push - ended
 ECHO [201;%OKGREEN_COLOR%m%MSG%[0m
+
+CD ..
 
 REM ================= Stage #5 - Docker Image Creation - end ==============================
 
@@ -185,16 +201,6 @@ IF NOT %errorlevel% == 0 (
     GOTO END
 )
 SET MSG=* Attch role policy - ended
-ECHO [201;%OKGREEN_COLOR%m%MSG%[0m
-
-SET MSG=* Create ECS CLI profile - started
-ECHO [201;%OKGREEN_COLOR%m%MSG%[0m
-ecs-cli configure profile --access-key %AWS_ACCESS_KEY_ID% --secret-key %AWS_SECRET_ACCESS_KEY% --profile-name %PROFILE_NAME% > NUL
-IF NOT %errorlevel% == 0 (
-    SET ERR_MSG=* Create ECS CLI profile - failed, error code: %errorlevel%
-    GOTO END
-)
-SET MSG=* Create ECS CLI profile - ended
 ECHO [201;%OKGREEN_COLOR%m%MSG%[0m
 
 SET MSG=* Create cluster configuration - started
@@ -373,7 +379,7 @@ REM     * 'Setting up GitHub Actions'.
 
 SET MSG=* Get Task Definition info - started
 ECHO [201;%OKGREEN_COLOR%m%MSG%[0m
-aws ecs describe-services --services %SERVICE_NAME% --region %REGION% --cluster %CLUSTER_NAME% --query services[0].taskDefinition > %TEMP_FILE_NAME%
+aws ecs describe-services --services %APP_NAME% --region %REGION% --cluster %CLUSTER_NAME% --query services[0].taskDefinition > %TEMP_FILE_NAME%
 IF NOT %errorlevel% == 0 (
     SET ERR_MSG=* Get Task Definition info - failed, error code: %errorlevel%
     GOTO END
