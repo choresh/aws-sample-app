@@ -25,21 +25,6 @@ SET REGION=us-east-2
 SET PORT=8080
 SET SERVICE_NAME=service-1
 
-REM Define values derived from 'APP_NAME'.
-SET ROLE_NAME=%APP_NAME% 
-SET PROFILE_NAME=%APP_NAME%
-SET CLUSTER_NAME=%APP_NAME%
-SET PROJECT_NAME=%APP_NAME%
-SET CLUSTER_CONFIG_NAME=%APP_NAME%
-SET LOG_GROUP_NAME=%APP_NAME%
-SET ECR_SERVICE_NAME=%APP_NAME%
-
-REM Define values derived from 'SERVICE_NAME'.
-SET ECR_REPOSITORY_NAME=%SERVICE_NAME%
-SET CONTAINER_NAME=%SERVICE_NAME%
-SET REPOSITORY_NAME=%SERVICE_NAME%
-SET GITHUB_WORKFLOW_PREFIX=%SERVICE_NAME%
-
 REM Define names for folders and files.
 SET CURR_FOLDER=%~dp0
 SET WORKING_FOLDER=%CURR_FOLDER%..
@@ -57,7 +42,7 @@ SET ECS_PARAMS_TEMPLATE_FILE_PATH=%AWS_FOLDER%/ecs-params-template.yml
 SET ECS_PARAMS_GENERATED_FILE_PATH=%TEMP_FOLDER%/ecs-params.yml
 SET GITHUB_WORKFLOWS_FILE_NAME_SUFFIX=deploy-to-aws.yml
 SET GITHUB_PARAMS_TEMPLATE_FILE_PATH=%GITHUB_FOLDER%/deploy-to-aws-template.yml
-SET GITHUB_PARAMS_GENERATED_FILE_PATH=%GITHUB_WORKFLOWS_FOLDER%/%GITHUB_WORKFLOW_PREFIX%-%GITHUB_WORKFLOWS_FILE_NAME_SUFFIX%
+SET GITHUB_PARAMS_GENERATED_FILE_PATH=%GITHUB_WORKFLOWS_FOLDER%/%SERVICE_NAME%-%GITHUB_WORKFLOWS_FILE_NAME_SUFFIX%
 
 REM Define print colors.
 REM SET HEADER_COLOR=95
@@ -86,10 +71,10 @@ REM In this stage we clear the most importent AWS resources (if exists).
 
 SET MSG=* Clear all resources (if exists) - started (may take few minutes...)
 ECHO [201;%OKGREEN_COLOR%m%MSG%[0m
-ecs-cli compose --project-name %PROJECT_NAME% service down --cluster-config %CLUSTER_CONFIG_NAME% --ecs-profile %PROFILE_NAME% > NUL 2>&1
-ecs-cli down --cluster-config %CLUSTER_CONFIG_NAME% --ecs-profile %PROFILE_NAME% --force > NUL 2>&1
-aws ecr delete-repository --repository-name %REPOSITORY_NAME% --region %REGION% --force > NUL 2>&1
-aws logs delete-log-group --log-group-name %LOG_GROUP_NAME% --region %REGION% > NUL 2>&1
+ecs-cli compose --project-name %APP_NAME% service down --cluster-config %APP_NAME% --ecs-profile %APP_NAME% > NUL 2>&1
+ecs-cli down --cluster-config %APP_NAME% --ecs-profile %APP_NAME% --force > NUL 2>&1
+aws ecr delete-repository --repository-name %SERVICE_NAME% --region %REGION% --force > NUL 2>&1
+aws logs delete-log-group --log-group-name %APP_NAME% --region %REGION% > NUL 2>&1
 SET MSG=* Clear all resources (if exists) - ended
 ECHO [201;%OKGREEN_COLOR%m%MSG%[0m
 
@@ -101,7 +86,7 @@ REM In this stage we create AWS repository (if not exists yet).
 
 SET MSG=* Get Repository info - started
 ECHO [201;%OKGREEN_COLOR%m%MSG%[0m
-aws ecr describe-repositories --repository-names %REPOSITORY_NAME% --region %REGION% --query repositories[0].repositoryUri > %TEMP_FILE_PATH% 2> NUL
+aws ecr describe-repositories --repository-names %SERVICE_NAME% --region %REGION% --query repositories[0].repositoryUri > %TEMP_FILE_PATH% 2> NUL
 SET MSG=* Get Repository info - ended
 ECHO [201;%OKGREEN_COLOR%m%MSG%[0m
 
@@ -111,7 +96,7 @@ IF %errorlevel% == 0 (
 
 SET MSG=* Create repository - started
 ECHO [201;%OKGREEN_COLOR%m%MSG%[0m
-aws ecr create-repository --repository-name %REPOSITORY_NAME% --region %REGION% --query repository.repositoryUri > %TEMP_FILE_PATH%
+aws ecr create-repository --repository-name %SERVICE_NAME% --region %REGION% --query repository.repositoryUri > %TEMP_FILE_PATH%
 IF NOT %errorlevel% == 0 (
     SET ERR_MSG=* Create repository - failed, error code: %errorlevel%
     GOTO END
@@ -137,7 +122,7 @@ REM In this stage we build docker image, and push it to our reposetory.
 
 SET MSG=* Create ECS CLI profile (if not exists) - started
 ECHO [201;%OKGREEN_COLOR%m%MSG%[0m
-ecs-cli configure profile --access-key %AWS_ACCESS_KEY_ID% --secret-key %AWS_SECRET_ACCESS_KEY% --profile-name %PROFILE_NAME% > NUL 2>1
+ecs-cli configure profile --access-key %AWS_ACCESS_KEY_ID% --secret-key %AWS_SECRET_ACCESS_KEY% --profile-name %APP_NAME% > NUL 2>1
 IF NOT %errorlevel% == 0 (
     SET ERR_MSG=* Create ECS CLI profile - failed, error code: %errorlevel%
     GOTO END
@@ -188,7 +173,7 @@ REM     * 'Tutorial: Creating a Cluster with a Fargate Task Using the Amazon ECS
 
 SET MSG=* Create role (if not exists) - started
 ECHO [201;%OKGREEN_COLOR%m%MSG%[0m
-aws iam --region %REGION% create-role --role-name %ROLE_NAME% --assume-role-policy-document file://%ROLE_POLICY_FILE_PATH% > NUL 2>&1
+aws iam --region %REGION% create-role --role-name %APP_NAME% --assume-role-policy-document file://%ROLE_POLICY_FILE_PATH% > NUL 2>&1
 IF NOT %errorlevel% == 0 (
     IF NOT %errorlevel% == 254 (
         SET ERR_MSG=* Create role - failed, error code: %errorlevel%
@@ -200,7 +185,7 @@ ECHO [201;%OKGREEN_COLOR%m%MSG%[0m
 
 SET MSG=* Attch role policy - started
 ECHO [201;%OKGREEN_COLOR%m%MSG%[0m
-aws iam --region %REGION% attach-role-policy --role-name %ROLE_NAME% --policy-arn arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy > NUL
+aws iam --region %REGION% attach-role-policy --role-name %APP_NAME% --policy-arn arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy > NUL
 IF NOT %errorlevel% == 0 (
     SET ERR_MSG=* Attch role policy - failed, error code: %errorlevel%
     GOTO END
@@ -210,7 +195,7 @@ ECHO [201;%OKGREEN_COLOR%m%MSG%[0m
 
 SET MSG=* Create cluster configuration - started
 ECHO [201;%OKGREEN_COLOR%m%MSG%[0m
-ecs-cli configure --cluster %CLUSTER_NAME% --default-launch-type FARGATE --config-name %APP_NAME% --region %REGION% > NUL
+ecs-cli configure --cluster %APP_NAME% --default-launch-type FARGATE --config-name %APP_NAME% --region %REGION% > NUL
 IF NOT %errorlevel% == 0 (
     SET ERR_MSG=* Create cluster configuration - failed, error code: %errorlevel%
     GOTO END
@@ -221,7 +206,7 @@ ECHO [201;%OKGREEN_COLOR%m%MSG%[0m
 SET MSG=* Create cluster - started (may take few minutes...)
 ECHO [201;%OKGREEN_COLOR%m%MSG%[0m
 ECHO =====================================================================
-ecs-cli up --cluster-config %CLUSTER_CONFIG_NAME% --ecs-profile %PROFILE_NAME% --force
+ecs-cli up --cluster-config %APP_NAME% --ecs-profile %APP_NAME% --force
 ECHO =====================================================================
 IF NOT %errorlevel% == 0 (
     SET ERR_MSG=* Create cluster - failed, error code: %errorlevel%
@@ -316,7 +301,7 @@ ECHO [201;%OKGREEN_COLOR%m%MSG%[0m
 
 SET MSG=* Prepare ECS params - started
 ECHO [201;%OKGREEN_COLOR%m%MSG%[0m
-POWERSHELL -Command "(gc '%ECS_PARAMS_TEMPLATE_FILE_PATH%') -replace '#ROLE_NAME#', '%ROLE_NAME%' | Out-File -encoding ASCII '%ECS_PARAMS_GENERATED_FILE_PATH%'"
+POWERSHELL -Command "(gc '%ECS_PARAMS_TEMPLATE_FILE_PATH%') -replace '#APP_NAME#', '%APP_NAME%' | Out-File -encoding ASCII '%ECS_PARAMS_GENERATED_FILE_PATH%'"
 POWERSHELL -Command "(gc '%ECS_PARAMS_GENERATED_FILE_PATH%') -replace '#SUBNET_1#', '%FOUND_SUBNET_1%'  | Out-File -encoding ASCII '%ECS_PARAMS_GENERATED_FILE_PATH%'"
 POWERSHELL -Command "(gc '%ECS_PARAMS_GENERATED_FILE_PATH%') -replace '#SUBNET_2#', '%FOUND_SUBNET_2%'  | Out-File -encoding ASCII '%ECS_PARAMS_GENERATED_FILE_PATH%'"
 POWERSHELL -Command "(gc '%ECS_PARAMS_GENERATED_FILE_PATH%') -replace '#SG_ID#', '%FOUND_SG_ID%' | Out-File -encoding ASCII '%ECS_PARAMS_GENERATED_FILE_PATH%'"
@@ -326,7 +311,7 @@ ECHO [201;%OKGREEN_COLOR%m%MSG%[0m
 SET MSG=* Creates ECS service from the compose file, and run it - started (may take few minutes...)
 ECHO [201;%OKGREEN_COLOR%m%MSG%[0m
 ECHO =====================================================================
-ecs-cli compose --ecs-params %ECS_PARAMS_GENERATED_FILE_PATH% --project-name %PROJECT_NAME% --file %DOCKER_COMPOSE_FILE_PATH% service up --create-log-groups --cluster-config %CLUSTER_CONFIG_NAME% --ecs-profile %PROFILE_NAME%
+ecs-cli compose --ecs-params %ECS_PARAMS_GENERATED_FILE_PATH% --project-name %APP_NAME% --file %DOCKER_COMPOSE_FILE_PATH% service up --create-log-groups --cluster-config %APP_NAME% --ecs-profile %APP_NAME%
 ECHO =====================================================================
 IF NOT %errorlevel% == 0 (
     SET ERR_MSG=* Creates ECS service from the compose file, and run it - failed, error code: %errorlevel%
@@ -338,7 +323,7 @@ ECHO [201;%OKGREEN_COLOR%m%MSG%[0m
 SET MSG=* Display info about cluster's running containers - started
 ECHO [201;%OKGREEN_COLOR%m%MSG%[0m
 ECHO =====================================================================
-ecs-cli compose --project-name %PROJECT_NAME% --file %DOCKER_COMPOSE_FILE_PATH% service ps --cluster-config %CLUSTER_CONFIG_NAME% --ecs-profile %PROFILE_NAME%
+ecs-cli compose --project-name %APP_NAME% --file %DOCKER_COMPOSE_FILE_PATH% service ps --cluster-config %APP_NAME% --ecs-profile %APP_NAME%
 ECHO =====================================================================
 IF NOT %errorlevel% == 0 (
     SET ERR_MSG=* Display info about cluster's running containers - failed, error code: %errorlevel%
@@ -350,7 +335,7 @@ ECHO [201;%OKGREEN_COLOR%m%MSG%[0m
 SET MSG=* Scale the tasks on the cluster - started (may take few minutes...)
 ECHO [201;%OKGREEN_COLOR%m%MSG%[0m
 ECHO =====================================================================
-ecs-cli compose --project-name %PROJECT_NAME% service scale 2 --cluster-config %CLUSTER_CONFIG_NAME% --ecs-profile %PROFILE_NAME%
+ecs-cli compose --project-name %APP_NAME% service scale 2 --cluster-config %APP_NAME% --ecs-profile %APP_NAME%
 ECHO =====================================================================
 IF NOT %errorlevel% == 0 (
     SET ERR_MSG=* Scale the tasks on the cluster - failed, error code: %errorlevel%
@@ -362,7 +347,7 @@ ECHO [201;%OKGREEN_COLOR%m%MSG%[0m
 SET MSG=* Display info about cluster's running containers, after scale - started
 ECHO [201;%OKGREEN_COLOR%m%MSG%[0m
 ECHO =====================================================================
-ecs-cli compose --project-name %PROJECT_NAME% service ps --cluster-config %CLUSTER_CONFIG_NAME% --ecs-profile %PROFILE_NAME%
+ecs-cli compose --project-name %APP_NAME% service ps --cluster-config %APP_NAME% --ecs-profile %APP_NAME%
 ECHO =====================================================================
 IF NOT %errorlevel% == 0 (
     SET ERR_MSG=* Display info about cluster's running containers, after scale - failed, error code: %errorlevel%
@@ -385,7 +370,7 @@ REM   * 'Setting up GitHub Actions'.
 
 SET MSG=* Get Task Definition info - started
 ECHO [201;%OKGREEN_COLOR%m%MSG%[0m
-aws ecs describe-services --services %APP_NAME% --region %REGION% --cluster %CLUSTER_NAME% --query services[0].taskDefinition > %TEMP_FILE_PATH%
+aws ecs describe-services --services %APP_NAME% --region %REGION% --cluster %APP_NAME% --query services[0].taskDefinition > %TEMP_FILE_PATH%
 IF NOT %errorlevel% == 0 (
     SET ERR_MSG=* Get Task Definition info - failed, error code: %errorlevel%
     GOTO END
@@ -407,13 +392,9 @@ ECHO [201;%OKGREEN_COLOR%m%MSG%[0m
 SET MSG=* Generate GitHub flow - started
 ECHO [201;%OKGREEN_COLOR%m%MSG%[0m
 POWERSHELL -Command "(gc %GITHUB_PARAMS_TEMPLATE_FILE_PATH%) -replace '#REGION#', '%REGION%' | Out-File -encoding ASCII %GITHUB_PARAMS_GENERATED_FILE_PATH%"
-POWERSHELL -Command "(gc %GITHUB_PARAMS_GENERATED_FILE_PATH%) -replace '#ECR_REPOSITORY_NAME#', '%ECR_REPOSITORY_NAME%' | Out-File -encoding ASCII %GITHUB_PARAMS_GENERATED_FILE_PATH%"
 POWERSHELL -Command "(gc %GITHUB_PARAMS_GENERATED_FILE_PATH%) -replace '#TASK_DEFINITION#', '%TASK_DEFINITION%' | Out-File -encoding ASCII %GITHUB_PARAMS_GENERATED_FILE_PATH%"
-POWERSHELL -Command "(gc %GITHUB_PARAMS_GENERATED_FILE_PATH%) -replace '#CONTAINER_NAME#', '%CONTAINER_NAME%' | Out-File -encoding ASCII %GITHUB_PARAMS_GENERATED_FILE_PATH%"
 POWERSHELL -Command "(gc %GITHUB_PARAMS_GENERATED_FILE_PATH%) -replace '#SERVICE_NAME#', '%SERVICE_NAME%' | Out-File -encoding ASCII %GITHUB_PARAMS_GENERATED_FILE_PATH%"
-POWERSHELL -Command "(gc %GITHUB_PARAMS_GENERATED_FILE_PATH%) -replace '#CLUSTER_NAME#', '%CLUSTER_NAME%' | Out-File -encoding ASCII %GITHUB_PARAMS_GENERATED_FILE_PATH%"
-POWERSHELL -Command "(gc %GITHUB_PARAMS_GENERATED_FILE_PATH%) -replace '#ECR_SERVICE_NAME#', '%ECR_SERVICE_NAME%' | Out-File -encoding ASCII %GITHUB_PARAMS_GENERATED_FILE_PATH%"
-POWERSHELL -Command "(gc %GITHUB_PARAMS_GENERATED_FILE_PATH%) -replace '#GITHUB_WORKFLOW_PREFIX#', '%GITHUB_WORKFLOW_PREFIX%' | Out-File -encoding ASCII %GITHUB_PARAMS_GENERATED_FILE_PATH%"
+POWERSHELL -Command "(gc %GITHUB_PARAMS_GENERATED_FILE_PATH%) -replace '#APP_NAME#', '%APP_NAME%' | Out-File -encoding ASCII %GITHUB_PARAMS_GENERATED_FILE_PATH%"
 POWERSHELL -Command "(gc %GITHUB_PARAMS_GENERATED_FILE_PATH%) -replace '#SERVICES_FOLDER#', '%SERVICES_FOLDER%' | Out-File -encoding ASCII %GITHUB_PARAMS_GENERATED_FILE_PATH%"
 
 SET MSG=* Generate GitHub flow - ended
@@ -426,7 +407,7 @@ REM ================= Stage #8 - Termination - start ===========================
 
 SET MSG=* To newly view available services, and thire URLs - run the folowing command (within the project root folder):
 ECHO [201;%OKGREEN_COLOR%m%MSG%[0m
-SET MSG=    ecs-cli compose --project-name %PROJECT_NAME% service ps --cluster-config %CLUSTER_CONFIG_NAME% --ecs-profile %PROFILE_NAME%
+SET MSG=    ecs-cli compose --project-name %APP_NAME% service ps --cluster-config %APP_NAME% --ecs-profile %APP_NAME%
 ECHO [201;%WARNING_COLOR%m%MSG%[0m
 
 :END
