@@ -25,22 +25,6 @@ SET REGION=us-east-2
 SET PORT=8080
 SET SERVICE_NAME=service-1
 
-REM Define constants (names for folders and files).
-SET CURR_FOLDER=%~dp0
-SET WORKING_FOLDER=%CURR_FOLDER%..
-SET TEMP_FOLDER_NAME=temp
-SET TEMP_FOLDER=dev-ops/%TEMP_FOLDER_NAME%
-SET AWS_FOLDER=dev-ops/aws
-SET DOCKER_COMPOSE_FILE_NAME=docker-compose.cloud.fetch.yml
-SET TEMP_FILE_NAME=%TEMP_FOLDER%/temp.txt
-SET GITHUB_WORKFLOWS_FOLDER=.github/workflows
-SET ROLE_POLICY_FILE=%AWS_FOLDER%/task-execution-assume-role.json
-SET ECS_PARAMS_TEMPLATE_FILE_NAME=%AWS_FOLDER%/ecs-params-template.yml
-SET ECS_PARAMS_FILE_NAME=%TEMP_FOLDER%/ecs-params.yml
-
-SET GITHUB_PARAMS_TEMPLATE_FILE_NAME=%GITHUB_WORKFLOWS_FOLDER%/deploy-to-aws-template.yml
-SET GITHUB_PARAMS_FILE_NAME=%GITHUB_WORKFLOWS_FOLDER%/deploy-to-aws.yml
-
 REM Define values derived from 'APP_NAME'.
 SET ROLE_NAME=%APP_NAME% 
 SET PROFILE_NAME=%APP_NAME%
@@ -54,6 +38,25 @@ REM Define values derived from 'SERVICE_NAME'.
 SET ECR_REPOSITORY_NAME=%SERVICE_NAME%
 SET CONTAINER_NAME=%SERVICE_NAME%
 SET REPOSITORY_NAME=%SERVICE_NAME%
+SET GITHUB_WORKFLOW_PREFIX=%SERVICE_NAME%
+
+REM Define names for folders and files.
+SET CURR_FOLDER=%~dp0
+SET WORKING_FOLDER=%CURR_FOLDER%..
+SET TEMP_FOLDER_NAME=temp
+SET DEV_OPS_FOLDER=dev-ops
+SET TEMP_FOLDER=%DEV_OPS_FOLDER%/%TEMP_FOLDER_NAME%
+SET AWS_FOLDER=%DEV_OPS_FOLDER%/aws
+SET GITHUB_FOLDER=%DEV_OPS_FOLDER%/github
+SET DOCKER_COMPOSE_FILE_PATH=docker-compose.cloud.fetch.yml
+SET TEMP_FILE_PATH=%TEMP_FOLDER%/temp.txt
+SET GITHUB_WORKFLOWS_FOLDER=.github/workflows
+SET ROLE_POLICY_FILE_PATH=%AWS_FOLDER%/task-execution-assume-role.json
+SET ECS_PARAMS_TEMPLATE_FILE_PATH=%AWS_FOLDER%/ecs-params-template.yml
+SET ECS_PARAMS_GENERATED_FILE_PATH=%TEMP_FOLDER%/ecs-params.yml
+SET GITHUB_WORKFLOWS_FILE_NAME_SUFFIX=deploy-to-aws.yml
+SET GITHUB_PARAMS_TEMPLATE_FILE_PATH=%GITHUB_FOLDER%/deploy-to-aws-template.yml
+SET GITHUB_PARAMS_GENERATED_FILE_PATH=%GITHUB_WORKFLOWS_FOLDER%/%GITHUB_WORKFLOW_PREFIX%-%GITHUB_WORKFLOWS_FILE_NAME_SUFFIX%
 
 REM Define print colors.
 REM SET HEADER_COLOR=95
@@ -71,7 +74,7 @@ REM Create the 'temp' folder (if not exists).
 CD %CURR_FOLDER%
 MD %TEMP_FOLDER_NAME% 2> NUL
 
-REM Move to working folde
+REM Move to working folder
 CD %WORKING_FOLDER%
 
 REM ================= Stage #2 - Settings - end ==============================
@@ -97,7 +100,7 @@ REM In this stage we create AWS repository (if not exists yet).
 
 SET MSG=* Get Repository info - started
 ECHO [201;%OKGREEN_COLOR%m%MSG%[0m
-aws ecr describe-repositories --repository-names %REPOSITORY_NAME% --region %REGION% --query repositories[0].repositoryUri > %TEMP_FILE_NAME% 2> NUL
+aws ecr describe-repositories --repository-names %REPOSITORY_NAME% --region %REGION% --query repositories[0].repositoryUri > %TEMP_FILE_PATH% 2> NUL
 SET MSG=* Get Repository info - ended
 ECHO [201;%OKGREEN_COLOR%m%MSG%[0m
 
@@ -107,7 +110,7 @@ IF %errorlevel% == 0 (
 
 SET MSG=* Create repository - started
 ECHO [201;%OKGREEN_COLOR%m%MSG%[0m
-aws ecr create-repository --repository-name %REPOSITORY_NAME% --region %REGION% --query repository.repositoryUri > %TEMP_FILE_NAME%
+aws ecr create-repository --repository-name %REPOSITORY_NAME% --region %REGION% --query repository.repositoryUri > %TEMP_FILE_PATH%
 IF NOT %errorlevel% == 0 (
     SET ERR_MSG=* Create repository - failed, error code: %errorlevel%
     GOTO END
@@ -119,7 +122,7 @@ ECHO [201;%OKGREEN_COLOR%m%MSG%[0m
 
 SET MSG=* Fetch Repository info - started
 ECHO [201;%OKGREEN_COLOR%m%MSG%[0m
-SET /P FOUND_REPOSITORY_URI= < %TEMP_FILE_NAME%
+SET /P FOUND_REPOSITORY_URI= < %TEMP_FILE_PATH%
 SET MSG=* Found Repository Uri: %FOUND_REPOSITORY_URI%
 ECHO [201;%OKGREEN_COLOR%m%MSG%[0m
 SET MSG=* Fetch Repository info - ended
@@ -184,7 +187,7 @@ REM     * 'Tutorial: Creating a Cluster with a Fargate Task Using the Amazon ECS
 
 SET MSG=* Create role (if not exists) - started
 ECHO [201;%OKGREEN_COLOR%m%MSG%[0m
-aws iam --region %REGION% create-role --role-name %ROLE_NAME% --assume-role-policy-document file://%ROLE_POLICY_FILE% > NUL 2>&1
+aws iam --region %REGION% create-role --role-name %ROLE_NAME% --assume-role-policy-document file://%ROLE_POLICY_FILE_PATH% > NUL 2>&1
 IF NOT %errorlevel% == 0 (
     IF NOT %errorlevel% == 254 (
         SET ERR_MSG=* Create role - failed, error code: %errorlevel%
@@ -228,7 +231,7 @@ ECHO [201;%OKGREEN_COLOR%m%MSG%[0m
 
 SET MSG=* Get VPC info - started
 ECHO [201;%OKGREEN_COLOR%m%MSG%[0m
-aws cloudformation list-stack-resources --stack-name amazon-ecs-cli-setup-aws-sample-app --region %REGION% --query StackResourceSummaries[?(@.LogicalResourceId=='Vpc')].PhysicalResourceId > %TEMP_FILE_NAME%
+aws cloudformation list-stack-resources --stack-name amazon-ecs-cli-setup-aws-sample-app --region %REGION% --query StackResourceSummaries[?(@.LogicalResourceId=='Vpc')].PhysicalResourceId > %TEMP_FILE_PATH%
 IF NOT %errorlevel% == 0 (
     SET ERR_MSG=* Get VPC info - failed, error code: %errorlevel%
     GOTO END
@@ -236,12 +239,12 @@ IF NOT %errorlevel% == 0 (
 SET MSG=* Get VPC info - ended
 ECHO [201;%OKGREEN_COLOR%m%MSG%[0m
 
-REM * Get value of 2nd line at file %TEMP_FILE_NAME%.
+REM * Get value of 2nd line at file %TEMP_FILE_PATH%.
 REM * Strip redundent parts at start/end of the found string.
 SET MSG=* Fetch VPC info - started
 ECHO [201;%OKGREEN_COLOR%m%MSG%[0m
 SET FOUND_VPC_ID_LINE=
-FOR /F "skip=1 delims=" %%i IN (%TEMP_FILE_NAME%) DO IF NOT DEFINED FOUND_VPC_ID_LINE SET FOUND_VPC_ID_LINE=%%i
+FOR /F "skip=1 delims=" %%i IN (%TEMP_FILE_PATH%) DO IF NOT DEFINED FOUND_VPC_ID_LINE SET FOUND_VPC_ID_LINE=%%i
 SET FOUND_VPC_ID=%FOUND_VPC_ID_LINE:~5,21%
 SET MSG=* Found VPC Id: %FOUND_VPC_ID%
 ECHO [201;%OKGREEN_COLOR%m%MSG%[0m
@@ -250,7 +253,7 @@ ECHO [201;%OKGREEN_COLOR%m%MSG%[0m
 
 SET MSG=* Get Subnets info - started
 ECHO [201;%OKGREEN_COLOR%m%MSG%[0m
-aws ec2 describe-subnets --filters "Name=vpc-id,Values=%FOUND_VPC_ID%" --region %REGION% --query Subnets[*].SubnetId > %TEMP_FILE_NAME%
+aws ec2 describe-subnets --filters "Name=vpc-id,Values=%FOUND_VPC_ID%" --region %REGION% --query Subnets[*].SubnetId > %TEMP_FILE_PATH%
 IF NOT %errorlevel% == 0 (
     SET ERR_MSG=* Get Subnets info - failed, error code: %errorlevel%
     GOTO END
@@ -261,18 +264,18 @@ ECHO [201;%OKGREEN_COLOR%m%MSG%[0m
 SET MSG=* Fetch Subnets info - started
 ECHO [201;%OKGREEN_COLOR%m%MSG%[0m
 
-REM * Get value of **2ND** line at file %TEMP_FILE_NAME%.
+REM * Get value of **2ND** line at file %TEMP_FILE_PATH%.
 REM * Strip redundent parts at start/end of the found string.
 SET FOUND_SUBNET_1_LINE=
-FOR /F "skip=1 delims=" %%i IN (%TEMP_FILE_NAME%) DO IF NOT DEFINED FOUND_SUBNET_1_LINE SET FOUND_SUBNET_1_LINE=%%i
+FOR /F "skip=1 delims=" %%i IN (%TEMP_FILE_PATH%) DO IF NOT DEFINED FOUND_SUBNET_1_LINE SET FOUND_SUBNET_1_LINE=%%i
 SET FOUND_SUBNET_1=%FOUND_SUBNET_1_LINE:~5,24%%
 SET MSG=* Found Subnet 1: %FOUND_SUBNET_1%
 ECHO [201;%OKGREEN_COLOR%m%MSG%[0m
 
-REM * Get value of **3RD** line at file %TEMP_FILE_NAME%.
+REM * Get value of **3RD** line at file %TEMP_FILE_PATH%.
 REM * Strip redundent parts at start/end of the found string.
 SET FOUND_SUBNET_2_LINE=
-FOR /F "skip=2 delims=" %%i IN (%TEMP_FILE_NAME%) DO IF NOT DEFINED FOUND_SUBNET_2_LINE SET FOUND_SUBNET_2_LINE=%%i
+FOR /F "skip=2 delims=" %%i IN (%TEMP_FILE_PATH%) DO IF NOT DEFINED FOUND_SUBNET_2_LINE SET FOUND_SUBNET_2_LINE=%%i
 SET FOUND_SUBNET_2=%FOUND_SUBNET_2_LINE:~5,24%%
 SET MSG=* Found Subnet 2: %FOUND_SUBNET_2%
 ECHO [201;%OKGREEN_COLOR%m%MSG%[0m
@@ -282,7 +285,7 @@ ECHO [201;%OKGREEN_COLOR%m%MSG%[0m
 
 SET MSG=* Get the default security group ID for the VPC - started
 ECHO [201;%OKGREEN_COLOR%m%MSG%[0m
-aws ec2 describe-security-groups --filters Name=vpc-id,Values=%FOUND_VPC_ID% --region %REGION% --query SecurityGroups[0].GroupId > %TEMP_FILE_NAME%
+aws ec2 describe-security-groups --filters Name=vpc-id,Values=%FOUND_VPC_ID% --region %REGION% --query SecurityGroups[0].GroupId > %TEMP_FILE_PATH%
 IF NOT %errorlevel% == 0 (
     SET ERR_MSG=* Get the default security group ID for the VPC - failed, error code: %errorlevel%
     GOTO END
@@ -292,7 +295,7 @@ ECHO [201;%OKGREEN_COLOR%m%MSG%[0m
 
 SET MSG=* Fetch SG info - started
 ECHO [201;%OKGREEN_COLOR%m%MSG%[0m
-SET /P FOUND_SG_ID= < %TEMP_FILE_NAME%
+SET /P FOUND_SG_ID= < %TEMP_FILE_PATH%
 SET MSG=* Found SG Id: %FOUND_SG_ID%
 ECHO [201;%OKGREEN_COLOR%m%MSG%[0m
 SET MSG=* Fetch SG info - ended
@@ -310,19 +313,19 @@ IF NOT %errorlevel% == 0 (
 SET MSG=* Add a security group rule to allow inbound access on port %PORT% - ended
 ECHO [201;%OKGREEN_COLOR%m%MSG%[0m
 
-SET MSG=* Set ECS params - started
+SET MSG=* Prepare ECS params - started
 ECHO [201;%OKGREEN_COLOR%m%MSG%[0m
-POWERSHELL -Command "(gc '%ECS_PARAMS_TEMPLATE_FILE_NAME%') -replace '#ROLE_NAME#', '%ROLE_NAME%' | Out-File -encoding ASCII '%ECS_PARAMS_FILE_NAME%'"
-POWERSHELL -Command "(gc '%ECS_PARAMS_FILE_NAME%') -replace '#SUBNET_1#', '%FOUND_SUBNET_1%'  | Out-File -encoding ASCII '%ECS_PARAMS_FILE_NAME%'"
-POWERSHELL -Command "(gc '%ECS_PARAMS_FILE_NAME%') -replace '#SUBNET_2#', '%FOUND_SUBNET_2%'  | Out-File -encoding ASCII '%ECS_PARAMS_FILE_NAME%'"
-POWERSHELL -Command "(gc '%ECS_PARAMS_FILE_NAME%') -replace '#SG_ID#', '%FOUND_SG_ID%' | Out-File -encoding ASCII '%ECS_PARAMS_FILE_NAME%'"
-SET MSG=* Set ECS params - ended
+POWERSHELL -Command "(gc '%ECS_PARAMS_TEMPLATE_FILE_PATH%') -replace '#ROLE_NAME#', '%ROLE_NAME%' | Out-File -encoding ASCII '%ECS_PARAMS_GENERATED_FILE_PATH%'"
+POWERSHELL -Command "(gc '%ECS_PARAMS_GENERATED_FILE_PATH%') -replace '#SUBNET_1#', '%FOUND_SUBNET_1%'  | Out-File -encoding ASCII '%ECS_PARAMS_GENERATED_FILE_PATH%'"
+POWERSHELL -Command "(gc '%ECS_PARAMS_GENERATED_FILE_PATH%') -replace '#SUBNET_2#', '%FOUND_SUBNET_2%'  | Out-File -encoding ASCII '%ECS_PARAMS_GENERATED_FILE_PATH%'"
+POWERSHELL -Command "(gc '%ECS_PARAMS_GENERATED_FILE_PATH%') -replace '#SG_ID#', '%FOUND_SG_ID%' | Out-File -encoding ASCII '%ECS_PARAMS_GENERATED_FILE_PATH%'"
+SET MSG=* Prepare ECS params - ended
 ECHO [201;%OKGREEN_COLOR%m%MSG%[0m
 
 SET MSG=* Creates ECS service from the compose file, and run it - started (may take few minutes...)
 ECHO [201;%OKGREEN_COLOR%m%MSG%[0m
 ECHO =====================================================================
-ecs-cli compose --ecs-params %ECS_PARAMS_FILE_NAME% --project-name %PROJECT_NAME% --file %DOCKER_COMPOSE_FILE_NAME% service up --create-log-groups --cluster-config %CLUSTER_CONFIG_NAME% --ecs-profile %PROFILE_NAME%
+ecs-cli compose --ecs-params %ECS_PARAMS_GENERATED_FILE_PATH% --project-name %PROJECT_NAME% --file %DOCKER_COMPOSE_FILE_PATH% service up --create-log-groups --cluster-config %CLUSTER_CONFIG_NAME% --ecs-profile %PROFILE_NAME%
 ECHO =====================================================================
 IF NOT %errorlevel% == 0 (
     SET ERR_MSG=* Creates ECS service from the compose file, and run it - failed, error code: %errorlevel%
@@ -334,7 +337,7 @@ ECHO [201;%OKGREEN_COLOR%m%MSG%[0m
 SET MSG=* Display info about cluster's running containers - started
 ECHO [201;%OKGREEN_COLOR%m%MSG%[0m
 ECHO =====================================================================
-ecs-cli compose --project-name %PROJECT_NAME% --file %DOCKER_COMPOSE_FILE_NAME% service ps --cluster-config %CLUSTER_CONFIG_NAME% --ecs-profile %PROFILE_NAME%
+ecs-cli compose --project-name %PROJECT_NAME% --file %DOCKER_COMPOSE_FILE_PATH% service ps --cluster-config %CLUSTER_CONFIG_NAME% --ecs-profile %PROFILE_NAME%
 ECHO =====================================================================
 IF NOT %errorlevel% == 0 (
     SET ERR_MSG=* Display info about cluster's running containers - failed, error code: %errorlevel%
@@ -378,9 +381,10 @@ REM   and its sub chapters:
 REM   * 'Creating an IAM user for GitHub Actions'.
 REM   * 'Setting up GitHub Actions'.
 
+
 SET MSG=* Get Task Definition info - started
 ECHO [201;%OKGREEN_COLOR%m%MSG%[0m
-aws ecs describe-services --services %APP_NAME% --region %REGION% --cluster %CLUSTER_NAME% --query services[0].taskDefinition > %TEMP_FILE_NAME%
+aws ecs describe-services --services %APP_NAME% --region %REGION% --cluster %CLUSTER_NAME% --query services[0].taskDefinition > %TEMP_FILE_PATH%
 IF NOT %errorlevel% == 0 (
     SET ERR_MSG=* Get Task Definition info - failed, error code: %errorlevel%
     GOTO END
@@ -390,7 +394,7 @@ ECHO [201;%OKGREEN_COLOR%m%MSG%[0m
 
 SET MSG=* Fetch Task Definition info - started
 ECHO [201;%OKGREEN_COLOR%m%MSG%[0m
-SET /P FOUND_TASK_DEFINITION= < %TEMP_FILE_NAME%
+SET /P FOUND_TASK_DEFINITION= < %TEMP_FILE_PATH%
 FOR /f "tokens=1,2 delims=/" %%a IN (%FOUND_TASK_DEFINITION%) DO (
 	SET TASK_DEFINITION=%%b
 )
@@ -399,16 +403,18 @@ ECHO [201;%OKGREEN_COLOR%m%MSG%[0m
 SET MSG=* Fetch Task Definition info - ended
 ECHO [201;%OKGREEN_COLOR%m%MSG%[0m
 
-SET MSG=* Set GitHub params - started
+SET MSG=* Generate GitHub flow - started
 ECHO [201;%OKGREEN_COLOR%m%MSG%[0m
-POWERSHELL -Command "(gc %GITHUB_PARAMS_TEMPLATE_FILE_NAME%) -replace '#REGION#', '%REGION%' | Out-File -encoding ASCII %GITHUB_PARAMS_FILE_NAME%"
-POWERSHELL -Command "(gc %GITHUB_PARAMS_FILE_NAME%) -replace '#ECR_REPOSITORY_NAME#', '%ECR_REPOSITORY_NAME%' | Out-File -encoding ASCII %GITHUB_PARAMS_FILE_NAME%"
-POWERSHELL -Command "(gc %GITHUB_PARAMS_FILE_NAME%) -replace '#TASK_DEFINITION#', '%TASK_DEFINITION%' | Out-File -encoding ASCII %GITHUB_PARAMS_FILE_NAME%"
-POWERSHELL -Command "(gc %GITHUB_PARAMS_FILE_NAME%) -replace '#CONTAINER_NAME#', '%CONTAINER_NAME%' | Out-File -encoding ASCII %GITHUB_PARAMS_FILE_NAME%"
-POWERSHELL -Command "(gc %GITHUB_PARAMS_FILE_NAME%) -replace '#SERVICE_NAME#', '%SERVICE_NAME%' | Out-File -encoding ASCII %GITHUB_PARAMS_FILE_NAME%"
-POWERSHELL -Command "(gc %GITHUB_PARAMS_FILE_NAME%) -replace '#CLUSTER_NAME#', '%CLUSTER_NAME%' | Out-File -encoding ASCII %GITHUB_PARAMS_FILE_NAME%"
-POWERSHELL -Command "(gc %GITHUB_PARAMS_FILE_NAME%) -replace '#ECR_SERVICE_NAME#', '%ECR_SERVICE_NAME%' | Out-File -encoding ASCII %GITHUB_PARAMS_FILE_NAME%"
-SET MSG=* Set GitHub params - ended
+POWERSHELL -Command "(gc %GITHUB_PARAMS_TEMPLATE_FILE_PATH%) -replace '#REGION#', '%REGION%' | Out-File -encoding ASCII %GITHUB_PARAMS_GENERATED_FILE_PATH%"
+POWERSHELL -Command "(gc %GITHUB_PARAMS_GENERATED_FILE_PATH%) -replace '#ECR_REPOSITORY_NAME#', '%ECR_REPOSITORY_NAME%' | Out-File -encoding ASCII %GITHUB_PARAMS_GENERATED_FILE_PATH%"
+POWERSHELL -Command "(gc %GITHUB_PARAMS_GENERATED_FILE_PATH%) -replace '#TASK_DEFINITION#', '%TASK_DEFINITION%' | Out-File -encoding ASCII %GITHUB_PARAMS_GENERATED_FILE_PATH%"
+POWERSHELL -Command "(gc %GITHUB_PARAMS_GENERATED_FILE_PATH%) -replace '#CONTAINER_NAME#', '%CONTAINER_NAME%' | Out-File -encoding ASCII %GITHUB_PARAMS_GENERATED_FILE_PATH%"
+POWERSHELL -Command "(gc %GITHUB_PARAMS_GENERATED_FILE_PATH%) -replace '#SERVICE_NAME#', '%SERVICE_NAME%' | Out-File -encoding ASCII %GITHUB_PARAMS_GENERATED_FILE_PATH%"
+POWERSHELL -Command "(gc %GITHUB_PARAMS_GENERATED_FILE_PATH%) -replace '#CLUSTER_NAME#', '%CLUSTER_NAME%' | Out-File -encoding ASCII %GITHUB_PARAMS_GENERATED_FILE_PATH%"
+POWERSHELL -Command "(gc %GITHUB_PARAMS_GENERATED_FILE_PATH%) -replace '#ECR_SERVICE_NAME#', '%ECR_SERVICE_NAME%' | Out-File -encoding ASCII %GITHUB_PARAMS_GENERATED_FILE_PATH%"
+POWERSHELL -Command "(gc %GITHUB_PARAMS_GENERATED_FILE_PATH%) -replace '#GITHUB_WORKFLOW_PREFIX#', '%GITHUB_WORKFLOW_PREFIX%' | Out-File -encoding ASCII %GITHUB_PARAMS_GENERATED_FILE_PATH%"
+
+SET MSG=* Generate GitHub flow - ended
 ECHO [201;%OKGREEN_COLOR%m%MSG%[0m
 
 REM ================= Stage #7 - GitHub Workflow Creation - end ==============================
