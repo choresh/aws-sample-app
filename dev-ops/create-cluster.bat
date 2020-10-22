@@ -33,7 +33,7 @@ SET TEMP_FOLDER=dev-ops/%TEMP_FOLDER_NAME%
 SET AWS_FOLDER=dev-ops/aws
 SET DOCKER_COMPOSE_FILE_NAME=docker-compose.cloud.fetch.yml
 SET TEMP_FILE_NAME=%TEMP_FOLDER%/temp.txt
-SET GITHUB_WORKFLOWS_FOLDER=%SERVICE_NAME%/.github/workflows
+SET GITHUB_WORKFLOWS_FOLDER=.github/workflows
 SET ROLE_POLICY_FILE=%AWS_FOLDER%/task-execution-assume-role.json
 SET ECS_PARAMS_TEMPLATE_FILE_NAME=%AWS_FOLDER%/ecs-params-template.yml
 SET ECS_PARAMS_FILE_NAME=%TEMP_FOLDER%/ecs-params.yml
@@ -48,9 +48,10 @@ SET CLUSTER_NAME=%APP_NAME%
 SET PROJECT_NAME=%APP_NAME%
 SET CLUSTER_CONFIG_NAME=%APP_NAME%
 SET LOG_GROUP_NAME=%APP_NAME%
+SET ECR_SERVICE_NAME=%APP_NAME%
 
 REM Define values derived from 'SERVICE_NAME'.
-SET ECR_REPOSITORY=%SERVICE_NAME%
+SET ECR_REPOSITORY_NAME=%SERVICE_NAME%
 SET CONTAINER_NAME=%SERVICE_NAME%
 SET REPOSITORY_NAME=%SERVICE_NAME%
 
@@ -374,8 +375,8 @@ REM * In this stage we create a GitHub workflow, to soppurt CI/CD.
 REM * With this workflow, an automatic build and push of docker image into the AWS reposetory will be executed on each GitHub push.
 REM * More info - see https://medium.com/javascript-in-plain-english/deploy-your-node-app-to-aws-container-service-via-github-actions-build-a-pipeline-c114adeb8903,
 REM   and its sub chapters:
-REM     * 'Creating an IAM user for GitHub Actions'.
-REM     * 'Setting up GitHub Actions'.
+REM   * 'Creating an IAM user for GitHub Actions'.
+REM   * 'Setting up GitHub Actions'.
 
 SET MSG=* Get Task Definition info - started
 ECHO [201;%OKGREEN_COLOR%m%MSG%[0m
@@ -401,11 +402,12 @@ ECHO [201;%OKGREEN_COLOR%m%MSG%[0m
 SET MSG=* Set GitHub params - started
 ECHO [201;%OKGREEN_COLOR%m%MSG%[0m
 POWERSHELL -Command "(gc %GITHUB_PARAMS_TEMPLATE_FILE_NAME%) -replace '#REGION#', '%REGION%' | Out-File -encoding ASCII %GITHUB_PARAMS_FILE_NAME%"
-POWERSHELL -Command "(gc %GITHUB_PARAMS_FILE_NAME%) -replace '#ECR_REPOSITORY#', '%ECR_REPOSITORY%' | Out-File -encoding ASCII %GITHUB_PARAMS_FILE_NAME%"
+POWERSHELL -Command "(gc %GITHUB_PARAMS_FILE_NAME%) -replace '#ECR_REPOSITORY_NAME#', '%ECR_REPOSITORY_NAME%' | Out-File -encoding ASCII %GITHUB_PARAMS_FILE_NAME%"
 POWERSHELL -Command "(gc %GITHUB_PARAMS_FILE_NAME%) -replace '#TASK_DEFINITION#', '%TASK_DEFINITION%' | Out-File -encoding ASCII %GITHUB_PARAMS_FILE_NAME%"
 POWERSHELL -Command "(gc %GITHUB_PARAMS_FILE_NAME%) -replace '#CONTAINER_NAME#', '%CONTAINER_NAME%' | Out-File -encoding ASCII %GITHUB_PARAMS_FILE_NAME%"
 POWERSHELL -Command "(gc %GITHUB_PARAMS_FILE_NAME%) -replace '#SERVICE_NAME#', '%SERVICE_NAME%' | Out-File -encoding ASCII %GITHUB_PARAMS_FILE_NAME%"
 POWERSHELL -Command "(gc %GITHUB_PARAMS_FILE_NAME%) -replace '#CLUSTER_NAME#', '%CLUSTER_NAME%' | Out-File -encoding ASCII %GITHUB_PARAMS_FILE_NAME%"
+POWERSHELL -Command "(gc %GITHUB_PARAMS_FILE_NAME%) -replace '#ECR_SERVICE_NAME#', '%ECR_SERVICE_NAME%' | Out-File -encoding ASCII %GITHUB_PARAMS_FILE_NAME%"
 SET MSG=* Set GitHub params - ended
 ECHO [201;%OKGREEN_COLOR%m%MSG%[0m
 
