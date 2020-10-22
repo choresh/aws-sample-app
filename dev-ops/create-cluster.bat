@@ -43,6 +43,7 @@ SET GITHUB_WORKFLOW_PREFIX=%SERVICE_NAME%
 REM Define names for folders and files.
 SET CURR_FOLDER=%~dp0
 SET WORKING_FOLDER=%CURR_FOLDER%..
+SET SERVICES_FOLDER="services"
 SET TEMP_FOLDER_NAME=temp
 SET DEV_OPS_FOLDER=dev-ops
 SET TEMP_FOLDER=%DEV_OPS_FOLDER%/%TEMP_FOLDER_NAME%
@@ -154,7 +155,7 @@ IF NOT %errorlevel% == 0 (
 SET MSG=* Authenticate Docker to an Amazon ECR reposetory - ended
 ECHO [201;%OKGREEN_COLOR%m%MSG%[0m
 
-CD %SERVICE_NAME%
+CD %SERVICES_FOLDER%/%SERVICE_NAME%
 
 SET MSG=* Build - started (may take few minutes...)
 ECHO [201;%OKGREEN_COLOR%m%MSG%[0m
@@ -172,7 +173,7 @@ ECHO =====================================================================
 SET MSG=* Push - ended
 ECHO [201;%OKGREEN_COLOR%m%MSG%[0m
 
-CD ..
+CD ../..
 
 REM ================= Stage #5 - Docker Image Creation - end ==============================
 
