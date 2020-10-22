@@ -29,7 +29,7 @@ on:
     branches: 
       - master
 
-name: Deploy to Amazon ECS
+name: Deploy to Amazon ECS (#GITHUB_WORKFLOW_PREFIX#)
 
 jobs:
   deploy:
