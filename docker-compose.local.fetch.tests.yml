@@ -1,13 +1,13 @@
 version: "3"
 services:
   service-1:
-    image: 403698577297.dkr.ecr.us-east-2.amazonaws.com/service-1
+    image: ACOUNT_ID.dkr.ecr.us-east-2.amazonaws.com/service-1
     depends_on:
       - postgres
     environment:       
       PG_HOST: postgres
   service-2:
-    image: 403698577297.dkr.ecr.us-east-2.amazonaws.com/service-2
+    image: ACOUNT_ID.dkr.ecr.us-east-2.amazonaws.com/service-2
     depends_on:
       - postgres
     environment:       
@@ -19,7 +19,7 @@ services:
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: postgres
   sut:
-    image: 403698577297.dkr.ecr.us-east-2.amazonaws.com/service-1
+    image: ACOUNT_ID.dkr.ecr.us-east-2.amazonaws.com/service-1
     depends_on:
       - service-1
     environment:

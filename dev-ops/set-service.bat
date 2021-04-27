@@ -1,30 +1,16 @@
-@ECHO OFF
-
 REM ================= Stage #1 - Settings - start ==============================
 REM In this stage we define all required settings varaibles.
 
 REM Store input parameters.
 SET SERVICE_NAME=%1
 SET APP_NAME=%2
-SET REGION=%3
-SET TEMP_FILE_PATH=%4
-SET TASK_DEFINITION=%5
-SET WORKING_FOLDER=%6
-SET ORANGE=%7
-SET RED=%8
-SET CURR_FOLDER=%9
 
 REM Define names for folders and files.
-SET SERVICES_FOLDER="services"
-SET DEV_OPS_FOLDER=dev-ops
-SET GITHUB_FOLDER=%DEV_OPS_FOLDER%/github
-SET GITHUB_WORKFLOWS_FOLDER=.github/workflows
+SET GITHUB_FOLDER=%DEV_OPS_FOLDER%github
+SET GITHUB_WORKFLOWS_FOLDER=%ROOT_FOLDER%\.github\workflows
 SET GITHUB_WORKFLOWS_FILE_NAME_SUFFIX=deploy-to-aws.yml
-SET GITHUB_PARAMS_TEMPLATE_FILE_PATH=%GITHUB_FOLDER%/deploy-to-aws-template.yml
-SET GITHUB_PARAMS_GENERATED_FILE_PATH=%GITHUB_WORKFLOWS_FOLDER%/%SERVICE_NAME%-%GITHUB_WORKFLOWS_FILE_NAME_SUFFIX%
-
-REM Move to working folder
-CD %WORKING_FOLDER%
+SET GITHUB_PARAMS_TEMPLATE_FILE_PATH=%GITHUB_FOLDER%\deploy-to-aws-template.yml
+SET GITHUB_PARAMS_GENERATED_FILE_PATH=%GITHUB_WORKFLOWS_FOLDER%\%SERVICE_NAME%-%GITHUB_WORKFLOWS_FILE_NAME_SUFFIX%
 
 SET MSG=* Handling of service '%SERVICE_NAME%' - started
 ECHO [201;%ORANGE%m%MSG%[0m
@@ -33,7 +19,7 @@ REM ================= Stage #1 - Settings - end ==============================
 
 
 REM ================= Stage #2 - Resources Clearing - start ==============================
-REM In this stage we clear the most importent AWS resources (if exists).
+REM In this stage we clear the AWS resources, which created at previous execution of this BAT file (if exists).
 
 SET MSG=* Clear all resources (if exists) - started (may take few minutes...)
 ECHO [201;%ORANGE%m%MSG%[0m
@@ -45,21 +31,11 @@ REM ================= Stage #2 - Resources Clearing - end ======================
 
 
 REM ================= Stage #3 - AWS Repository Creation - start ==============================
-REM In this stage we create AWS repository (if not exists yet).
-
-SET MSG=* Get Repository info - started
-ECHO [201;%ORANGE%m%MSG%[0m
-aws ecr describe-repositories --repository-names %SERVICE_NAME% --region %REGION% --query repositories[0].repositoryUri > %TEMP_FILE_PATH% 2> NUL
-SET MSG=* Get Repository info - ended
-ECHO [201;%ORANGE%m%MSG%[0m
-
-IF %errorlevel% == 0 (
-    GOTO REPOSITORY_EXISTS
-)
+REM In this stage we create AWS repository.
 
 SET MSG=* Create repository - started
 ECHO [201;%ORANGE%m%MSG%[0m
-aws ecr create-repository --repository-name %SERVICE_NAME% --region %REGION% --query repository.repositoryUri > %TEMP_FILE_PATH%
+aws ecr create-repository --repository-name %SERVICE_NAME% --region %REGION% --query repository.repositoryUri > "%TEMP_FILE_PATH%"
 IF NOT %errorlevel% == 0 (
     SET ERR_MSG=* Create repository - failed, error code: %errorlevel%
     GOTO END
@@ -67,11 +43,9 @@ IF NOT %errorlevel% == 0 (
 SET MSG=* Create repository - ended
 ECHO [201;%ORANGE%m%MSG%[0m
 
-:REPOSITORY_EXISTS
-
 SET MSG=* Fetch Repository info - started
 ECHO [201;%ORANGE%m%MSG%[0m
-SET /P FOUND_REPOSITORY_URI= < %TEMP_FILE_PATH%
+SET /P FOUND_REPOSITORY_URI= < "%TEMP_FILE_PATH%"
 SET MSG=* Found Repository Uri: %FOUND_REPOSITORY_URI%
 ECHO [201;%ORANGE%m%MSG%[0m
 SET MSG=* Fetch Repository info - ended
@@ -93,12 +67,12 @@ REM ================= Stage #3 - AWS Repository Creation - end =================
 REM ================= Stage #4 - Docker Image Creation - start ==============================
 REM In this stage we build docker image, and push it to our reposetory.
 
-CD %SERVICES_FOLDER%/%SERVICE_NAME%
-
 SET MSG=* Build - started (may take few minutes...)
 ECHO [201;%ORANGE%m%MSG%[0m
 ECHO =====================================================================
-docker build -t %FOUND_REPOSITORY_URI% . 
+CD "%SERVICES_FOLDER%\%SERVICE_NAME%"
+docker build -t %FOUND_REPOSITORY_URI% .
+CD "%SERVICES_FOLDER%"
 ECHO =====================================================================
 SET MSG=* Build - ended
 ECHO [201;%ORANGE%m%MSG%[0m
@@ -110,8 +84,6 @@ docker push %FOUND_REPOSITORY_URI%
 ECHO =====================================================================
 SET MSG=* Push - ended
 ECHO [201;%ORANGE%m%MSG%[0m
-
-CD ../..
 
 REM ================= Stage #4 - Docker Image Creation - end ==============================
 
@@ -126,12 +98,11 @@ REM   * 'Setting up GitHub Actions'.
 
 SET MSG=* Generate GitHub flow - started
 ECHO [201;%ORANGE%m%MSG%[0m
-POWERSHELL -Command "(gc %GITHUB_PARAMS_TEMPLATE_FILE_PATH%) -replace '#REGION#', '%REGION%' | Out-File -encoding ASCII %GITHUB_PARAMS_GENERATED_FILE_PATH%"
-POWERSHELL -Command "(gc %GITHUB_PARAMS_GENERATED_FILE_PATH%) -replace '#TASK_DEFINITION#', '%TASK_DEFINITION%' | Out-File -encoding ASCII %GITHUB_PARAMS_GENERATED_FILE_PATH%"
-POWERSHELL -Command "(gc %GITHUB_PARAMS_GENERATED_FILE_PATH%) -replace '#SERVICE_NAME#', '%SERVICE_NAME%' | Out-File -encoding ASCII %GITHUB_PARAMS_GENERATED_FILE_PATH%"
-POWERSHELL -Command "(gc %GITHUB_PARAMS_GENERATED_FILE_PATH%) -replace '#APP_NAME#', '%APP_NAME%' | Out-File -encoding ASCII %GITHUB_PARAMS_GENERATED_FILE_PATH%"
-POWERSHELL -Command "(gc %GITHUB_PARAMS_GENERATED_FILE_PATH%) -replace '#SERVICES_FOLDER#', '%SERVICES_FOLDER%' | Out-File -encoding ASCII %GITHUB_PARAMS_GENERATED_FILE_PATH%"
-
+POWERSHELL -Command "(gc '%GITHUB_PARAMS_TEMPLATE_FILE_PATH%') -replace '#REGION#', '%REGION%' | Out-File -encoding ASCII '%GITHUB_PARAMS_GENERATED_FILE_PATH%'"
+POWERSHELL -Command "(gc '%GITHUB_PARAMS_GENERATED_FILE_PATH%') -replace '#TASK_DEFINITION#', '%TASK_DEFINITION%' | Out-File -encoding ASCII '%GITHUB_PARAMS_GENERATED_FILE_PATH%'"
+POWERSHELL -Command "(gc '%GITHUB_PARAMS_GENERATED_FILE_PATH%') -replace '#SERVICE_NAME#', '%SERVICE_NAME%' | Out-File -encoding ASCII '%GITHUB_PARAMS_GENERATED_FILE_PATH%'"
+POWERSHELL -Command "(gc '%GITHUB_PARAMS_GENERATED_FILE_PATH%') -replace '#APP_NAME#', '%APP_NAME%' | Out-File -encoding ASCII '%GITHUB_PARAMS_GENERATED_FILE_PATH%'"
+POWERSHELL -Command "(gc '%GITHUB_PARAMS_GENERATED_FILE_PATH%') -replace '#SERVICES_FOLDER#', '%SERVICES_FOLDER%' | Out-File -encoding ASCII '%GITHUB_PARAMS_GENERATED_FILE_PATH%'"
 SET MSG=* Generate GitHub flow - ended
 ECHO [201;%ORANGE%m%MSG%[0m
 
@@ -148,8 +119,5 @@ IF DEFINED ERR_MSG (
 
 SET MSG=* Handling of service '%SERVICE_NAME%' - ended
 ECHO [201;%ORANGE%m%MSG%[0m
-
-REM Move to current folder
-CD %CURR_FOLDER%
 
 REM ================= Stage #6 - Termination - end ==============================

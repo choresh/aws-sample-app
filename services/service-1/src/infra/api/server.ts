@@ -26,7 +26,7 @@ export class Server {
     });
       
     // Start listen for requests
-    return new Promise((resolve, reject) => {
+    return new Promise<void>((resolve, reject) => {
       this._app.listen(port, () => {
         console.log(`Server is running on port ${port}.`);
         resolve();

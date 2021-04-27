@@ -24,41 +24,39 @@ SET APP_NAME=aws-sample-app
 SET REGION=us-east-2
 SET PORT=8080
 
-REM Define names for folders and files.
-SET CURR_FOLDER=%~dp0
-SET WORKING_FOLDER=%CURR_FOLDER%..
+REM Define names for folders/files/colors.
+SET DEV_OPS_FOLDER=%~dp0
+SET ROOT_FOLDER=%DEV_OPS_FOLDER%..
 SET TEMP_FOLDER_NAME=temp
-SET DEV_OPS_FOLDER=dev-ops
-SET TEMP_FOLDER=%DEV_OPS_FOLDER%/%TEMP_FOLDER_NAME%
-SET AWS_FOLDER=%DEV_OPS_FOLDER%/aws
-SET DOCKER_COMPOSE_FILE_PATH=docker-compose.cloud.fetch.yml
-SET TEMP_FILE_PATH=%TEMP_FOLDER%/temp.txt
-SET ROLE_POLICY_FILE_PATH=%AWS_FOLDER%/task-execution-assume-role.json
-SET ECS_PARAMS_TEMPLATE_FILE_PATH=%AWS_FOLDER%/ecs-params-template.yml
-SET ECS_PARAMS_GENERATED_FILE_PATH=%TEMP_FOLDER%/ecs-params.yml
-
+SET TEMP_FOLDER=%DEV_OPS_FOLDER%%TEMP_FOLDER_NAME%
+SET AWS_FOLDER=%DEV_OPS_FOLDER%aws
+SET DOCKER_COMPOSE_FILE_PATH=%ROOT_FOLDER%\docker-compose.cloud.fetch.yml
+SET TEMP_FILE_PATH=%TEMP_FOLDER%\temp.txt
+SET ROLE_POLICY_FILE_PATH=%AWS_FOLDER%\task-execution-assume-role.json
+SET ECS_PARAMS_TEMPLATE_FILE_PATH=%AWS_FOLDER%\ecs-params-template.yml
+SET ECS_PARAMS_GENERATED_FILE_PATH=%TEMP_FOLDER%\ecs-params.yml
+SET SERVICES_FOLDER=%ROOT_FOLDER%\services
+SET STACK_NAME=amazon-ecs-cli-setup-%APP_NAME%
 SET GREEN=92
 SET ORANGE=93
 SET RED=91
 
 REM Create the 'temp' folder (if not exists).
-
-CD %CURR_FOLDER%
-MD %TEMP_FOLDER_NAME% 2> NUL
-
-REM Move to working folder
-CD %WORKING_FOLDER%
+MD %DEV_OPS_FOLDER%%TEMP_FOLDER_NAME% 2> NUL
 
 REM ================= Stage #2 - Settings - end ==============================
 
 
 REM ================= Stage #3 - Resources Clearing - start ==============================
-REM In this stage we clear the most importent AWS resources (if exists).
+REM In this stage we clear the AWS resources, which created at previous execution of this BAT file (if exists).
 
 SET MSG=* Clear all resources (if exists) - started (may take few minutes...)
 ECHO [201;%GREEN%m%MSG%[0m
+CD "%ROOT_FOLDER%"
 ecs-cli compose --project-name %APP_NAME% service down --cluster-config %APP_NAME% --ecs-profile %APP_NAME% > NUL 2>&1
-ecs-cli down --cluster-config %APP_NAME% --ecs-profile %APP_NAME% --force > NUL 2>&1
+CD "%DEV_OPS_FOLDER%"
+aws cloudformation delete-stack --stack-name %STACK_NAME% > NUL 2>&1
+aws ecs delete-cluster --cluster %APP_NAME% > NUL 2>&1
 aws logs delete-log-group --log-group-name %APP_NAME% --region %REGION% > NUL 2>&1
 SET MSG=* Clear all resources (if exists) - ended
 ECHO [201;%GREEN%m%MSG%[0m
@@ -71,7 +69,7 @@ REM In this stage we build docker image, and push it to our reposetory.
 
 SET MSG=* Create ECS CLI profile (if not exists) - started
 ECHO [201;%GREEN%m%MSG%[0m
-ecs-cli configure profile --access-key %AWS_ACCESS_KEY_ID% --secret-key %AWS_SECRET_ACCESS_KEY% --profile-name %APP_NAME% > NUL 2>1
+ecs-cli configure profile --access-key %AWS_ACCESS_KEY_ID% --secret-key %AWS_SECRET_ACCESS_KEY% --profile-name %APP_NAME% > NUL 2>&1
 IF NOT %errorlevel% == 0 (
     SET ERR_MSG=* Create ECS CLI profile - failed, error code: %errorlevel%
     GOTO END
@@ -92,7 +90,7 @@ REM     * 'Tutorial: Creating a Cluster with a Fargate Task Using the Amazon ECS
 
 SET MSG=* Create role (if not exists) - started
 ECHO [201;%GREEN%m%MSG%[0m
-aws iam --region %REGION% create-role --role-name %APP_NAME% --assume-role-policy-document file://%ROLE_POLICY_FILE_PATH% > NUL 2>&1
+aws iam --region %REGION% create-role --role-name %APP_NAME% --assume-role-policy-document "file://%ROLE_POLICY_FILE_PATH%" > NUL 2>&1
 IF NOT %errorlevel% == 0 (
     IF NOT %errorlevel% == 254 (
         SET ERR_MSG=* Create role - failed, error code: %errorlevel%
@@ -136,7 +134,7 @@ ECHO [201;%GREEN%m%MSG%[0m
 
 SET MSG=* Get VPC info - started
 ECHO [201;%GREEN%m%MSG%[0m
-aws cloudformation list-stack-resources --stack-name amazon-ecs-cli-setup-aws-sample-app --region %REGION% --query StackResourceSummaries[?(@.LogicalResourceId=='Vpc')].PhysicalResourceId > %TEMP_FILE_PATH%
+aws cloudformation list-stack-resources --stack-name %STACK_NAME% --region %REGION% --query StackResourceSummaries[?(@.LogicalResourceId=='Vpc')].PhysicalResourceId > "%TEMP_FILE_PATH%"
 IF NOT %errorlevel% == 0 (
     SET ERR_MSG=* Get VPC info - failed, error code: %errorlevel%
     GOTO END
@@ -147,9 +145,9 @@ ECHO [201;%GREEN%m%MSG%[0m
 REM * Get value of 2nd line at file %TEMP_FILE_PATH%.
 REM * Strip redundent parts at start/end of the found string.
 SET MSG=* Fetch VPC info - started
-ECHO [201;%GREEN%m%MSG%[0m
+ECHO [201;%GREEN%m%MSG%[0m 
 SET FOUND_VPC_ID_LINE=
-FOR /F "skip=1 delims=" %%i IN (%TEMP_FILE_PATH%) DO IF NOT DEFINED FOUND_VPC_ID_LINE SET FOUND_VPC_ID_LINE=%%i
+FOR /F "usebackq skip=1 delims=" %%i IN ("%TEMP_FILE_PATH%") DO IF NOT DEFINED FOUND_VPC_ID_LINE SET FOUND_VPC_ID_LINE=%%i
 SET FOUND_VPC_ID=%FOUND_VPC_ID_LINE:~5,21%
 SET MSG=* Found VPC Id: %FOUND_VPC_ID%
 ECHO [201;%GREEN%m%MSG%[0m
@@ -158,7 +156,7 @@ ECHO [201;%GREEN%m%MSG%[0m
 
 SET MSG=* Get Subnets info - started
 ECHO [201;%GREEN%m%MSG%[0m
-aws ec2 describe-subnets --filters "Name=vpc-id,Values=%FOUND_VPC_ID%" --region %REGION% --query Subnets[*].SubnetId > %TEMP_FILE_PATH%
+aws ec2 describe-subnets --filters "Name=vpc-id,Values=%FOUND_VPC_ID%" --region %REGION% --query Subnets[*].SubnetId > "%TEMP_FILE_PATH%"
 IF NOT %errorlevel% == 0 (
     SET ERR_MSG=* Get Subnets info - failed, error code: %errorlevel%
     GOTO END
@@ -172,7 +170,7 @@ ECHO [201;%GREEN%m%MSG%[0m
 REM * Get value of **2ND** line at file %TEMP_FILE_PATH%.
 REM * Strip redundent parts at start/end of the found string.
 SET FOUND_SUBNET_1_LINE=
-FOR /F "skip=1 delims=" %%i IN (%TEMP_FILE_PATH%) DO IF NOT DEFINED FOUND_SUBNET_1_LINE SET FOUND_SUBNET_1_LINE=%%i
+FOR /F "usebackq skip=1 delims=" %%i IN ("%TEMP_FILE_PATH%") DO IF NOT DEFINED FOUND_SUBNET_1_LINE SET FOUND_SUBNET_1_LINE=%%i
 SET FOUND_SUBNET_1=%FOUND_SUBNET_1_LINE:~5,24%%
 SET MSG=* Found Subnet 1: %FOUND_SUBNET_1%
 ECHO [201;%GREEN%m%MSG%[0m
@@ -180,7 +178,7 @@ ECHO [201;%GREEN%m%MSG%[0m
 REM * Get value of **3RD** line at file %TEMP_FILE_PATH%.
 REM * Strip redundent parts at start/end of the found string.
 SET FOUND_SUBNET_2_LINE=
-FOR /F "skip=2 delims=" %%i IN (%TEMP_FILE_PATH%) DO IF NOT DEFINED FOUND_SUBNET_2_LINE SET FOUND_SUBNET_2_LINE=%%i
+FOR /F "usebackq skip=2 delims=" %%i IN ("%TEMP_FILE_PATH%") DO IF NOT DEFINED FOUND_SUBNET_2_LINE SET FOUND_SUBNET_2_LINE=%%i
 SET FOUND_SUBNET_2=%FOUND_SUBNET_2_LINE:~5,24%%
 SET MSG=* Found Subnet 2: %FOUND_SUBNET_2%
 ECHO [201;%GREEN%m%MSG%[0m
@@ -190,7 +188,7 @@ ECHO [201;%GREEN%m%MSG%[0m
 
 SET MSG=* Get the default security group ID for the VPC - started
 ECHO [201;%GREEN%m%MSG%[0m
-aws ec2 describe-security-groups --filters Name=vpc-id,Values=%FOUND_VPC_ID% --region %REGION% --query SecurityGroups[0].GroupId > %TEMP_FILE_PATH%
+aws ec2 describe-security-groups --filters Name=vpc-id,Values=%FOUND_VPC_ID% --region %REGION% --query SecurityGroups[0].GroupId > "%TEMP_FILE_PATH%"
 IF NOT %errorlevel% == 0 (
     SET ERR_MSG=* Get the default security group ID for the VPC - failed, error code: %errorlevel%
     GOTO END
@@ -200,7 +198,7 @@ ECHO [201;%GREEN%m%MSG%[0m
 
 SET MSG=* Fetch SG info - started
 ECHO [201;%GREEN%m%MSG%[0m
-SET /P FOUND_SG_ID= < %TEMP_FILE_PATH%
+SET /P FOUND_SG_ID= < "%TEMP_FILE_PATH%"
 SET MSG=* Found SG Id: %FOUND_SG_ID%
 ECHO [201;%GREEN%m%MSG%[0m
 SET MSG=* Fetch SG info - ended
@@ -233,41 +231,27 @@ REM ================= Stage #5 - AWS Clustr Creation - end =====================
 REM ================= Stage #6 - Get GitHub Workflow Params - start ==============================
 REM In this stage we fetch the 'task definition' - parameter which required for creation of GitHub workflow.
 
-SET MSG=* Get Task Definition info - started
+SET MSG=* Get Task Definition - started
 ECHO [201;%GREEN%m%MSG%[0m
-aws ecs describe-services --services %APP_NAME% --region %REGION% --cluster %APP_NAME% --query services[0].taskDefinition > %TEMP_FILE_PATH%
+aws ecs  describe-task-definition --task-definition %APP_NAME% --region %REGION% --query taskDefinition.taskDefinitionArn > "%TEMP_FILE_PATH%"
 IF NOT %errorlevel% == 0 (
-    SET ERR_MSG=* Get Task Definition info - failed, error code: %errorlevel%
+    SET ERR_MSG=* Get Task Definition - failed, error code: %errorlevel%
     GOTO END
 )
-SET MSG=* Get Task Definition info - ended
-ECHO [201;%GREEN%m%MSG%[0m
-
-SET MSG=* Fetch Task Definition info - started
-ECHO [201;%GREEN%m%MSG%[0m
-SET /P FOUND_TASK_DEFINITION= < %TEMP_FILE_PATH%
-FOR /f "tokens=1,2 delims=/" %%a IN (%FOUND_TASK_DEFINITION%) DO (
-	SET TASK_DEFINITION=%%b
-)
+SET /P TASK_DEFINITION= < "%TEMP_FILE_PATH%"
 SET MSG=* Found Task Definition: %TASK_DEFINITION%
-ECHO [201;%GREEN%m%MSG%[0m
-SET MSG=* Fetch Task Definition info - ended
+SET MSG=* Get Task Definition - ended
 ECHO [201;%GREEN%m%MSG%[0m
 
 REM ================= Stage #6 - Get GitHub Workflow Params - end ==============================
 
 
 REM ================= Stage #7 - Handle Operations in Service Level - start ==============================
-
-REM Move to current folder
-CD %CURR_FOLDER%
-
-FOR /D %%i IN (../services/*) DO (
-    CALL set-service %%i %APP_NAME% %REGION% %TEMP_FILE_PATH% %TASK_DEFINITION% "%WORKING_FOLDER%" %ORANGE% %RED% "%CURR_FOLDER%"
+CD "%SERVICES_FOLDER%"
+FOR /D %%i IN (*) DO (
+    CALL "%DEV_OPS_FOLDER%set-service.bat" %%i %APP_NAME%
 )
-
-REM Move to working folder
-CD %WORKING_FOLDER%
+CD "%DEV_OPS_FOLDER%"
 
 REM ================= Stage #7 - Handle Operations in Service Level - end ==============================
 
@@ -277,7 +261,7 @@ REM ================= Stage #8 - Create the ECS Service - start ================
 SET MSG=* Creates ECS service from the compose file, and run it - started (may take few minutes...)
 ECHO [201;%GREEN%m%MSG%[0m
 ECHO =====================================================================
-ecs-cli compose --ecs-params %ECS_PARAMS_GENERATED_FILE_PATH% --project-name %APP_NAME% --file %DOCKER_COMPOSE_FILE_PATH% service up --create-log-groups --cluster-config %APP_NAME% --ecs-profile %APP_NAME%
+ecs-cli compose --ecs-params "%ECS_PARAMS_GENERATED_FILE_PATH%" --project-name %APP_NAME% --file "%DOCKER_COMPOSE_FILE_PATH%" service up --create-log-groups --cluster-config %APP_NAME% --ecs-profile %APP_NAME%
 ECHO =====================================================================
 IF NOT %errorlevel% == 0 (
     SET ERR_MSG=* Creates ECS service from the compose file, and run it - failed, error code: %errorlevel%
@@ -289,7 +273,7 @@ ECHO [201;%GREEN%m%MSG%[0m
 SET MSG=* Display info about cluster's running containers - started
 ECHO [201;%GREEN%m%MSG%[0m
 ECHO =====================================================================
-ecs-cli compose --project-name %APP_NAME% --file %DOCKER_COMPOSE_FILE_PATH% service ps --cluster-config %APP_NAME% --ecs-profile %APP_NAME%
+ecs-cli compose --project-name %APP_NAME% --file "%DOCKER_COMPOSE_FILE_PATH%" service ps --cluster-config %APP_NAME% --ecs-profile %APP_NAME%
 ECHO =====================================================================
 IF NOT %errorlevel% == 0 (
     SET ERR_MSG=* Display info about cluster's running containers - failed, error code: %errorlevel%
@@ -301,7 +285,7 @@ ECHO [201;%GREEN%m%MSG%[0m
 SET MSG=* Scale the tasks on the cluster - started (may take few minutes...)
 ECHO [201;%GREEN%m%MSG%[0m
 ECHO =====================================================================
-ecs-cli compose --project-name %APP_NAME% service scale 2 --cluster-config %APP_NAME% --ecs-profile %APP_NAME%
+ecs-cli compose --project-name %APP_NAME% --file "%DOCKER_COMPOSE_FILE_PATH%" service scale 2 --cluster-config %APP_NAME% --ecs-profile %APP_NAME%
 ECHO =====================================================================
 IF NOT %errorlevel% == 0 (
     SET ERR_MSG=* Scale the tasks on the cluster - failed, error code: %errorlevel%
@@ -313,7 +297,7 @@ ECHO [201;%GREEN%m%MSG%[0m
 SET MSG=* Display info about cluster's running containers, after scale - started
 ECHO [201;%GREEN%m%MSG%[0m
 ECHO =====================================================================
-ecs-cli compose --project-name %APP_NAME% service ps --cluster-config %APP_NAME% --ecs-profile %APP_NAME%
+ecs-cli compose --project-name %APP_NAME% --file "%DOCKER_COMPOSE_FILE_PATH%" service ps --cluster-config %APP_NAME% --ecs-profile %APP_NAME%
 ECHO =====================================================================
 IF NOT %errorlevel% == 0 (
     SET ERR_MSG=* Display info about cluster's running containers, after scale - failed, error code: %errorlevel%
@@ -335,9 +319,7 @@ ECHO [201;%ORANGE%m%MSG%[0m
 :END
 
 REM Delete the 'temp' folder.
-CD %CURR_FOLDER%
-RMDIR /S /Q %TEMP_FOLDER_NAME%
-CD ..
+REM RMDIR /S /Q %DEV_OPS_FOLDER%%TEMP_FOLDER_NAME%
 
 IF DEFINED ERR_MSG (
     ECHO [201;%RED%m%ERR_MSG%[0m
@@ -346,7 +328,7 @@ IF DEFINED ERR_MSG (
 SET MSG=* The entire sequence has ended
 ECHO [201;%GREEN%m%MSG%[0m
 
+REM ================= Stage #9 - Termination - end ==============================
+
 PAUSE
 @ECHO ON
-
-REM ================= Stage #9 - Termination - end ==============================

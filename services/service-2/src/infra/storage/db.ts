@@ -21,9 +21,9 @@ export class Db {
 
   private static async connect(entitiesPath: string): Promise<Connection> {
      
-    // Env variable 'PG_HOST' defined in 'docker-compose.yml', the 'localhost' will
-    // be selected if run performed without the 'docker-compose.yml' (e.g. while
-    // developer runs the service locally, out of docker macine).
+    // Env variable 'PG_HOST' defined in 'docker-compose.yml', the default value
+    // 'localhost' will be selected if run performed without the 'docker-compose.yml'
+    // (e.g. while developer runs the service locally, out of docker machine).
     let postgresHost: string = process.env.PG_HOST || "localhost";
     console.log("Configured postgres host:", postgresHost);
 
@@ -70,7 +70,7 @@ export class Db {
             reject("Connect to postgress DB failed, reason: " + err.message);
             return;
           }
-          await new Promise((resolve, reject) => {
+          await new Promise<void>((resolve, reject) => {
             setTimeout(() => {
               resolve();
             }, CONNECTION_RETRY_TIMEOUT_MS);

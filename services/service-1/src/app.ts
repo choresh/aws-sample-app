@@ -8,7 +8,7 @@ class App {
   public static run(): void {
     Db.run("build/src/storage/entities/*.js")
       .then(() => {
-        return Server.run(PORT, [new  Entity1Router()]);
+        return Server.run(PORT, [new Entity1Router()]);
       })
       .catch((err) => {
         console.error(err);
