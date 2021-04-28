@@ -1,7 +1,7 @@
 version: "3"
 services:
   service-1:
-    image: ACOUNT_ID.dkr.ecr.us-east-2.amazonaws.com/service-1
+    image: 212306653209.dkr.ecr.us-east-2.amazonaws.com/service-1
     depends_on:
       - postgres
     ports:
@@ -9,7 +9,7 @@ services:
     environment:       
       PG_HOST: postgres
   service-2:
-    image: ACOUNT_ID.dkr.ecr.us-east-2.amazonaws.com/service-2
+    image: 212306653209.dkr.ecr.us-east-2.amazonaws.com/service-2
     depends_on:
       - postgres
     ports:

@@ -1,7 +1,7 @@
 version: "3"
 services:
   service-1:
-    image: ACOUNT_ID.dkr.ecr.us-east-2.amazonaws.com/service-1 
+    image: 212306653209.dkr.ecr.us-east-2.amazonaws.com/service-1 
     ports:
       - "8080:8080"
     depends_on:
@@ -13,7 +13,7 @@ services:
         awslogs-region: us-east-2
         awslogs-stream-prefix: aws-sample-app
   service-2:
-    image: ACOUNT_ID.dkr.ecr.us-east-2.amazonaws.com/service-2 
+    image: 212306653209.dkr.ecr.us-east-2.amazonaws.com/service-2 
     ports:
       - "8081:8081"
     depends_on:
